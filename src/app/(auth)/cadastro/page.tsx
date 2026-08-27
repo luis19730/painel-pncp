@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Button from '@/components/ui/button'
 import Input from '@/components/ui/input'
+import GoogleAuthButton from '@/components/auth/google-auth-button'
 
 export default function CadastroPage() {
   const supabase = createClient()
@@ -74,6 +75,14 @@ export default function CadastroPage() {
           {success}
         </div>
       )}
+
+      <GoogleAuthButton mode="signup" />
+
+      <div className="flex items-center gap-3 my-6">
+        <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+        <span className="text-xs font-medium text-slate-400 dark:text-slate-500">ou</span>
+        <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input

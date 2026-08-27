@@ -6,6 +6,13 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Button from '@/components/ui/button'
 import Input from '@/components/ui/input'
+import GoogleAuthButton from '@/components/auth/google-auth-button'
+
+function readUrlError(): string {
+  if (typeof window === 'undefined') return ''
+  const params = new URLSearchParams(window.location.search)
+  return params.get('error') ?? ''
+}
 
 export default function LoginPage() {
   const router = useRouter()
@@ -13,7 +20,7 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
+  const [error, setError] = useState(readUrlError)
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,6 +58,14 @@ export default function LoginPage() {
           {error}
         </div>
       )}
+
+      <GoogleAuthButton mode="login" />
+
+      <div className="flex items-center gap-3 my-6">
+        <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+        <span className="text-xs font-medium text-slate-400 dark:text-slate-500">ou</span>
+        <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
