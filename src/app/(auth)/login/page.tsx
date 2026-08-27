@@ -28,22 +28,27 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
 
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    try {
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-    if (authError) {
-      setError(
-        authError.message === 'Invalid login credentials'
-          ? 'E-mail ou senha inválidos.'
-          : authError.message
-      )
+      if (authError) {
+        setError(
+          authError.message === 'Invalid login credentials'
+            ? 'E-mail ou senha inválidos.'
+            : authError.message
+        )
+        setLoading(false)
+        return
+      }
+
+      router.push('/dashboard')
+    } catch {
+      setError('Não foi possível conectar ao servidor. Tente novamente.')
       setLoading(false)
-      return
     }
-
-    router.push('/dashboard')
   }
 
   return (

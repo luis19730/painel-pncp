@@ -35,26 +35,31 @@ export default function CadastroPage() {
 
     setLoading(true)
 
-    const { error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { name },
-      },
-    })
+    try {
+      const { error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { name },
+        },
+      })
 
-    if (authError) {
-      setError(
-        authError.message === 'User already registered'
-          ? 'Este e-mail já está cadastrado.'
-          : authError.message
-      )
+      if (authError) {
+        const msg =
+          authError.message === 'User already registered'
+            ? 'Este e-mail já está cadastrado.'
+            : authError.message
+        setError(msg)
+        setLoading(false)
+        return
+      }
+
+      setSuccess('Verifique seu e-mail para confirmar o cadastro.')
       setLoading(false)
-      return
+    } catch {
+      setError('Não foi possível conectar ao servidor. Tente novamente.')
+      setLoading(false)
     }
-
-    setSuccess('Verifique seu e-mail para confirmar o cadastro.')
-    setLoading(false)
   }
 
   return (
