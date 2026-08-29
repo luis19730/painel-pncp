@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { Search, Bell, User, Menu, X, LogOut, Sparkles } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
@@ -13,8 +14,11 @@ import Logo from '@/components/layout/logo'
 export default function Header() {
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [mobileLeaving, setMobileLeaving] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const supabase = createClient()
+  const mobileTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
@@ -23,6 +27,43 @@ export default function Header() {
     })
     return () => sub.subscription.unsubscribe()
   }, [supabase])
+
+  const mobileClose = useCallback(() => {
+    if (!mobileOpen || mobileLeaving) return
+    setMobileLeaving(true)
+    mobileTimerRef.current = setTimeout(() => {
+      setMobileOpen(false)
+      setMobileLeaving(false)
+    }, 190)
+  }, [mobileOpen, mobileLeaving])
+
+  const mobileToggle = () => {
+    if (mobileOpen) mobileClose()
+    else setMobileOpen(true)
+  }
+
+  // Trava o scroll da página enquanto o menu mobile está aberto (ou fechando).
+  useEffect(() => {
+    if (!mobileOpen && !mobileLeaving) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [mobileOpen, mobileLeaving])
+
+  // Fecha com a tecla Escape e limpa o timer ao desmontar.
+  useEffect(() => {
+    if (!mobileOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') mobileClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      if (mobileTimerRef.current) window.clearTimeout(mobileTimerRef.current)
+    }
+  }, [mobileOpen, mobileClose])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -33,9 +74,10 @@ export default function Header() {
     <header className="sticky top-0 z-40 flex items-center justify-between px-4 lg:px-6 h-14 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-[#0b1120]/80 backdrop-blur-md">
       <div className="flex items-center gap-3">
         <button
-          onClick={() => setMobileOpen(!mobileOpen)}
+          onClick={mobileToggle}
           className="lg:hidden p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400"
           aria-label="Abrir menu"
+          aria-expanded={mobileOpen}
         >
           {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
@@ -62,38 +104,48 @@ export default function Header() {
             </Link>
 
             <Link
-              href="/ia"
+              href="/ia-licitacoes"
               className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-secondary to-accent text-white text-xs font-bold hover:opacity-90 transition-all"
             >
               <Sparkles className="w-3.5 h-3.5" />
               IA
             </Link>
 
-            <div className="relative group">
-              <button className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Menu do usuário">
+            <div className="relative">
+              <button
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                aria-label="Menu do usuário"
+                aria-expanded={userMenuOpen}
+              >
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
                   <User className="w-4 h-4 text-white" />
                 </div>
               </button>
-              <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                <Link href="/perfil" className="block px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">
-                  Meu Perfil
-                </Link>
-                <Link href="/configuracoes" className="block px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">
-                  Configurações
-                </Link>
-                <Link href="/planos" className="block px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">
-                  Planos
-                </Link>
-                <hr className="my-1 dark:border-slate-700" />
-                <button
-                  onClick={handleLogout}
-                  className="w-full text-left px-4 py-2 text-sm text-danger hover:bg-danger-soft dark:hover:bg-red-500/10 flex items-center gap-2"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Sair
-                </button>
-              </div>
+              {userMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
+                  <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 py-1 z-50">
+                    <Link href="/perfil" onClick={() => setUserMenuOpen(false)} className="block px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">
+                      Meu Perfil
+                    </Link>
+                    <Link href="/configuracoes" onClick={() => setUserMenuOpen(false)} className="block px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">
+                      Configurações
+                    </Link>
+                    <Link href="/planos" onClick={() => setUserMenuOpen(false)} className="block px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">
+                      Planos
+                    </Link>
+                    <hr className="my-1 dark:border-slate-700" />
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left px-4 py-2 text-sm text-danger hover:bg-danger-soft dark:hover:bg-red-500/10 flex items-center gap-2"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sair
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </>
         ) : (
@@ -103,22 +155,30 @@ export default function Header() {
         )}
       </div>
 
-      {mobileOpen && (
-        <MobileNav onClose={() => setMobileOpen(false)} user={user} onLogout={handleLogout} />
+      {(mobileOpen || mobileLeaving) && (
+        <MobileNav
+          leaving={mobileLeaving}
+          onClose={mobileClose}
+          user={user}
+          onLogout={handleLogout}
+        />
       )}
     </header>
   )
 }
 
 function MobileNav({
+  leaving,
   onClose,
   user,
   onLogout,
 }: {
+  leaving: boolean
   onClose: () => void
   user: SupabaseUser | null
   onLogout: () => void
 }) {
+  if (typeof document === 'undefined') return null
   const groups = [
     {
       title: 'Encontrar',
@@ -134,28 +194,61 @@ function MobileNav({
       links: [
         { href: '/precos', label: 'Mapa de Preços' },
         { href: '/concorrentes', label: 'Concorrentes' },
-        { href: '/relatorios', label: 'Relatórios' },
-        { href: '/calendario', label: 'Calendário' },
+        { href: '/analise-edital', label: 'Análise de Edital' },
+        { href: '/score', label: 'Score' },
+      ],
+    },
+    {
+      title: 'Inteligência',
+      links: [
+        { href: '/ia-licitacoes', label: 'IA' },
+        { href: '/modalidades', label: 'Modalidades' },
+        { href: '/estudo-tecnico', label: 'Estudo Técnico' },
+        { href: '/matriz-riscos', label: 'Matriz de Riscos' },
+      ],
+    },
+    {
+      title: 'Preparar',
+      links: [
+        { href: '/checklist', label: 'Checklist' },
+        { href: '/justificativa', label: 'Justificativa' },
+        { href: '/documentos', label: 'Documentos' },
       ],
     },
     {
       title: 'Gerenciar',
       links: [
         { href: '/favoritos', label: 'Favoritos' },
+        { href: '/relatorios', label: 'Relatórios' },
+        { href: '/calendario', label: 'Calendário' },
         { href: '/perfil', label: 'Perfil' },
         { href: '/configuracoes', label: 'Configurações' },
         { href: '/planos', label: 'Planos' },
+        { href: '/ajuda', label: 'Ajuda' },
       ],
     },
   ]
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 lg:hidden">
-      <div className="absolute inset-0 bg-black/40 dark:bg-black/60" onClick={onClose} />
-      <div className="absolute left-0 top-0 bottom-0 w-72 bg-white dark:bg-[#0b1120] shadow-xl p-4 overflow-y-auto flex flex-col">
-        <div className="flex items-center justify-between mb-6">
+      <div
+        className={`absolute inset-0 bg-black/40 dark:bg-black/60 ${leaving ? 'animate-drawer-backdrop-out' : 'animate-drawer-backdrop'}`}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Menu de navegação"
+        className={`absolute left-0 top-0 bottom-0 w-72 max-w-[85vw] h-[100dvh] min-h-[100dvh] bg-white dark:bg-[#0b1120] shadow-xl p-4 overflow-y-auto overscroll-contain flex flex-col ${leaving ? 'animate-drawer-left-out' : 'animate-drawer-left'}`}
+      >
+        <div className="flex items-center justify-between mb-6 shrink-0">
           <Logo href="/dashboard" />
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500">
+          <button
+            onClick={onClose}
+            className="p-2 -mr-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300"
+            aria-label="Fechar menu"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -183,13 +276,14 @@ function MobileNav({
         {user && (
           <button
             onClick={() => { onLogout(); onClose(); }}
-            className="w-full mt-4 px-3 py-2.5 rounded-lg text-sm font-medium text-danger hover:bg-danger-soft dark:hover:bg-red-500/10 text-left flex items-center gap-2"
+            className="w-full mt-4 shrink-0 px-3 py-2.5 rounded-lg text-sm font-medium text-danger hover:bg-danger-soft dark:hover:bg-red-500/10 text-left flex items-center gap-2"
           >
             <LogOut className="w-4 h-4" />
             Sair
           </button>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
