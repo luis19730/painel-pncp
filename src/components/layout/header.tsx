@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Search, Bell, User, Menu, X, LogOut, Sparkles } from 'lucide-react'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -14,11 +14,9 @@ import Logo from '@/components/layout/logo'
 export default function Header() {
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [mobileLeaving, setMobileLeaving] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const supabase = createClient()
-  const mobileTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
@@ -28,42 +26,33 @@ export default function Header() {
     return () => sub.subscription.unsubscribe()
   }, [supabase])
 
-  const mobileClose = useCallback(() => {
-    if (!mobileOpen || mobileLeaving) return
-    setMobileLeaving(true)
-    mobileTimerRef.current = setTimeout(() => {
-      setMobileOpen(false)
-      setMobileLeaving(false)
-    }, 190)
-  }, [mobileOpen, mobileLeaving])
+  // O drawer (portal) fica sempre montado e alterna classes de transição CSS
+  // (sem timers): fechar nunca depende de re-render assíncrono, então links,
+  // backdrop, X e Escape sempre fecham o menu de forma confiável.
 
-  const mobileToggle = () => {
-    if (mobileOpen) mobileClose()
-    else setMobileOpen(true)
-  }
+  const mobileToggle = () => setMobileOpen((v) => !v)
 
-  // Trava o scroll da página enquanto o menu mobile está aberto (ou fechando).
+  // Trava o scroll da página enquanto o menu mobile está aberto.
   useEffect(() => {
-    if (!mobileOpen && !mobileLeaving) return
+    if (!mobileOpen) return
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
       document.body.style.overflow = prev
     }
-  }, [mobileOpen, mobileLeaving])
+  }, [mobileOpen])
 
-  // Fecha com a tecla Escape e limpa o timer ao desmontar.
+  // Fecha com a tecla Escape.
   useEffect(() => {
     if (!mobileOpen) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') mobileClose()
+      if (e.key === 'Escape') setMobileOpen(false)
     }
     window.addEventListener('keydown', onKey)
     return () => {
       window.removeEventListener('keydown', onKey)
-      if (mobileTimerRef.current) window.clearTimeout(mobileTimerRef.current)
     }
-  }, [mobileOpen, mobileClose])
+  }, [mobileOpen])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -155,25 +144,23 @@ export default function Header() {
         )}
       </div>
 
-      {(mobileOpen || mobileLeaving) && (
-        <MobileNav
-          leaving={mobileLeaving}
-          onClose={mobileClose}
-          user={user}
-          onLogout={handleLogout}
-        />
-      )}
+      <MobileNav
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        user={user}
+        onLogout={handleLogout}
+      />
     </header>
   )
 }
 
 function MobileNav({
-  leaving,
+  open,
   onClose,
   user,
   onLogout,
 }: {
-  leaving: boolean
+  open: boolean
   onClose: () => void
   user: SupabaseUser | null
   onLogout: () => void
@@ -230,17 +217,20 @@ function MobileNav({
   ]
 
   return createPortal(
-    <div className="fixed inset-0 z-50 lg:hidden">
+    <div
+      className={`fixed inset-0 z-50 lg:hidden ${open ? 'pointer-events-auto' : 'pointer-events-none'}`}
+      inert={!open}
+      aria-hidden={!open}
+    >
       <div
-        className={`absolute inset-0 bg-black/40 dark:bg-black/60 ${leaving ? 'animate-drawer-backdrop-out' : 'animate-drawer-backdrop'}`}
+        className={`absolute inset-0 bg-black/40 dark:bg-black/60 transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0'}`}
         onClick={onClose}
-        aria-hidden="true"
       />
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Menu de navegação"
-        className={`absolute left-0 top-0 bottom-0 w-72 max-w-[85vw] h-[100dvh] min-h-[100dvh] bg-white dark:bg-[#0b1120] shadow-xl p-4 overflow-y-auto overscroll-contain flex flex-col ${leaving ? 'animate-drawer-left-out' : 'animate-drawer-left'}`}
+        className={`absolute left-0 top-0 bottom-0 w-72 max-w-[85vw] h-[100dvh] min-h-[100dvh] bg-white dark:bg-[#0b1120] shadow-xl p-4 overflow-y-auto overscroll-contain flex flex-col transition-transform duration-300 ease-out ${open ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <div className="flex items-center justify-between mb-6 shrink-0">
           <Logo href="/dashboard" />

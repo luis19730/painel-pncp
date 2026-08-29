@@ -101,43 +101,6 @@ body {
 }
 .animate-fade-in { animation: fade-in 0.4s ease-out both; }
 
-/* Menus mobile (drawer/overlay) */
-@keyframes drawer-backdrop {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-.animate-drawer-backdrop { animation: drawer-backdrop 0.2s ease-out both; }
-
-@keyframes drawer-backdrop-out {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-.animate-drawer-backdrop-out { animation: drawer-backdrop-out 0.18s ease-in both; }
-
-@keyframes drawer-left {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(0); }
-}
-.animate-drawer-left { animation: drawer-left 0.26s ease-out both; }
-
-@keyframes drawer-left-out {
-  from { transform: translateX(0); opacity: 1; }
-  to { transform: translateX(-100%); opacity: 0; }
-}
-.animate-drawer-left-out { animation: drawer-left-out 0.18s ease-in both; }
-
-@keyframes drawer-right {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
-}
-.animate-drawer-right { animation: drawer-right 0.26s ease-out both; }
-
-@keyframes drawer-right-out {
-  from { transform: translateX(0); opacity: 1; }
-  to { transform: translateX(100%); opacity: 0; }
-}
-.animate-drawer-right-out { animation: drawer-right-out 0.18s ease-in both; }
-
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-12px); }
