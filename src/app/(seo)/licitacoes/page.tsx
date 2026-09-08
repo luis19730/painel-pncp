@@ -33,7 +33,7 @@ async function fetchLicitacoes(): Promise<LicitacaoItem[]> {
   try {
     const base = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
     const res = await fetch(
-      `${base}/api/pncp/search/?q=licitacao&tipos_documento=edital&pagina=1`,
+      `${base}/api/pncp/mapa?modalidade=todos`,
       { next: { revalidate: 120 } }
     )
     if (!res.ok) return []

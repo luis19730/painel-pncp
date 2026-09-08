@@ -35,7 +35,7 @@ function loadProfile(): CompanyProfile | null {
 }
 
 const UF_OPTIONS = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO'];
-const MODALIDADES = ['Pregão Eletrônico', 'Pregão Presencial', 'Dispensa de Licitação', 'Inexigibilidade', 'Concorrência'];
+const MODALIDADES = ['Pregão Eletrônico', 'Pregão Presencial', 'Concorrência', 'Concurso', 'Leilão', 'Dispensa de Licitação', 'Inexigibilidade'];
 const STATUSES = ['Aberta', 'Em andamento', 'Encerrada'];
 
 function ResultsSkeleton() {
@@ -80,8 +80,11 @@ export default function BuscaPage() {
 
   useEffect(() => {
     setLoading(true);
-    const params = new URLSearchParams({ q: query, tipos_documento: 'edital', pagina: String(page) });
-    fetch(`/api/pncp/search/?${params}`)
+    const term = query.trim();
+    const params = term
+      ? new URLSearchParams({ q: query, tipos_documento: 'edital', pagina: String(page) })
+      : new URLSearchParams({ modalidade: 'todos', pagina: String(page) });
+    fetch(term ? `/api/pncp/search/?${params}` : `/api/pncp/mapa?${params}`)
       .then((res) => res.json())
       .then((data) => {
         const mapped = mapItems(data.data || data.items || []);

@@ -66,8 +66,11 @@ export default function OportunidadesPage() {
   const fetchItems = useCallback(async (query: string, pageNum: number) => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ q: query, tipos_documento: 'edital', pagina: String(pageNum) });
-      const res = await fetch(`/api/pncp/search/?${params}`);
+      const term = query.trim();
+      const params = term
+        ? new URLSearchParams({ q: query, tipos_documento: 'edital', pagina: String(pageNum) })
+        : new URLSearchParams({ modalidade: 'todos', pagina: String(pageNum) });
+      const res = await fetch(term ? `/api/pncp/search/?${params}` : `/api/pncp/mapa?${params}`);
       const data = await res.json();
       const mapped = mapItems(data.data || data.items || []);
       const profile = loadProfile();
