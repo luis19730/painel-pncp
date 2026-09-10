@@ -6,20 +6,44 @@ import { ScoreBadge } from '@/components/opportunities/score-badge';
 import PageHeader from '@/components/ui/page-header';
 import EmptyState from '@/components/ui/empty-state';
 import { formatCurrency, formatDate, getStatusColor } from '@/lib/utils';
+import { ITEMS } from '@/lib/market-data';
+import { buildPncpEditalUrl } from '@/lib/pncp';
 
 export default function FavoritosPage() {
   const [favoritos, setFavoritos] = useState<any[]>([]);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('favoritos');
-      if (stored) {
+    let cancelled = false;
+    (async () => {
+      try {
+        const stored = localStorage.getItem('favoritos');
+        if (!stored) return;
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) setFavoritos(parsed);
+        if (!Array.isArray(parsed)) return;
+        const enriched = await Promise.all(
+          parsed.map(async (raw) => {
+            if (raw.objeto) return raw;
+            const local = ITEMS.find((i) => i.id === raw.id);
+            if (local) {
+              return { ...raw, objeto: `${local.nome} - ${local.descricao}`, orgao: local.orgao, valor: local.valor, uf: local.uf, municipio: local.municipio, dataEncerramento: local.data, modalidade: local.modalidade, situacao: 'Aberta' };
+            }
+            try {
+              const { getOpportunityById, mapItem } = await import('@/lib/pncp');
+              const opp = await getOpportunityById(raw.id);
+              const mapped = opp ? mapItem(opp) : null;
+              if (mapped) {
+                return { ...raw, objeto: mapped.objeto, orgao: mapped.orgao, valor: mapped.valor, uf: mapped.uf, municipio: mapped.municipio, dataEncerramento: mapped.dataEncerramento, modalidade: mapped.modalidade, situacao: mapped.situacao };
+              }
+            } catch {}
+            return { ...raw, objeto: 'Oportunidade salva', orgao: 'Detalhes indisponíveis no momento' };
+          })
+        );
+        if (!cancelled) setFavoritos(enriched);
+      } catch {
+        if (!cancelled) setFavoritos([]);
       }
-    } catch {
-      setFavoritos([]);
-    }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const removeFavorito = (id: string) => {
@@ -75,9 +99,11 @@ export default function FavoritosPage() {
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <a
-                  href={`/oportunidades/${item.id}`}
+                  href={buildPncpEditalUrl({ link: null, id: item.id })}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="p-2 text-primary hover:bg-primary-soft dark:hover:bg-primary/10 rounded-xl transition-colors"
-                  title="Ver detalhes"
+                  title="Ver no PNCP"
                 >
                   <ExternalLink className="w-4 h-4" />
                 </a>

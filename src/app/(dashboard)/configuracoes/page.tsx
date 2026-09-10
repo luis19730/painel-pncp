@@ -5,6 +5,7 @@ import { Moon, Bell, User, Save, Mail, Smartphone, Palette, Sun } from 'lucide-r
 import type { LucideIcon } from 'lucide-react';
 import PageHeader from '@/components/ui/page-header';
 import Button from '@/components/ui/button';
+import { useTheme } from '@/components/providers/theme-provider';
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void }) {
   return (
@@ -40,7 +41,7 @@ function Section({ Icon, title, children }: { Icon: LucideIcon; title: string; c
 }
 
 export default function ConfiguracoesPage() {
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const { theme, setTheme } = useTheme();
   const [notifications, setNotifications] = useState({
     email: true,
     push: false,
@@ -55,7 +56,6 @@ export default function ConfiguracoesPage() {
       const stored = localStorage.getItem('configuracoes');
       if (stored) {
         const data = JSON.parse(stored);
-        if (data.theme) setTheme(data.theme);
         if (data.notifications) setNotifications(data.notifications);
       }
     } catch {}

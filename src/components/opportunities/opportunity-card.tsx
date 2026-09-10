@@ -1,14 +1,16 @@
 'use client'
 
 import Link from 'next/link'
-import { MapPin, Building2, Calendar, ArrowRight, Coins } from 'lucide-react'
+import { MapPin, Building2, Calendar, Coins, ExternalLink } from 'lucide-react'
 import { ScoreBadge } from '@/components/opportunities/score-badge'
 import FavoriteButton from '@/components/opportunities/favorite-button'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatDate, getDaysUntil, getDeadlineColor, getStatusColor } from '@/lib/utils'
+import { buildPncpEditalUrl } from '@/lib/pncp'
 
 export default function OpportunityCard({ item }: { item: any }) {
   const days = getDaysUntil(item.dataEncerramento)
+  const href = buildPncpEditalUrl(item)
 
   return (
     <div className="card card-hover p-5 flex flex-col">
@@ -58,11 +60,13 @@ export default function OpportunityCard({ item }: { item: any }) {
           )}
         </div>
         <Link
-          href={`/oportunidades/${item.id}`}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-hover transition-colors"
         >
-          Analisar
-          <ArrowRight className="w-3.5 h-3.5" />
+          Ver no PNCP
+          <ExternalLink className="w-3.5 h-3.5" />
         </Link>
       </div>
     </div>

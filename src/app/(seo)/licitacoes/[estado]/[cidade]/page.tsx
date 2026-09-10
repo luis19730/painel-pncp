@@ -1,32 +1,33 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { fetchSeoLicitacoes } from '@/lib/seo-data'
 
 const ESTADOS: Record<string, string> = {
   AC: 'Acre',
   AL: 'Alagoas',
-  AP: 'Amapa',
+  AP: 'Amapá',
   AM: 'Amazonas',
   BA: 'Bahia',
-  CE: 'Ceara',
+  CE: 'Ceará',
   DF: 'Distrito Federal',
-  ES: 'Espirito Santo',
-  GO: 'Goias',
-  MA: 'Maranhao',
+  ES: 'Espírito Santo',
+  GO: 'Goiás',
+  MA: 'Maranhão',
   MT: 'Mato Grosso',
   MS: 'Mato Grosso do Sul',
   MG: 'Minas Gerais',
-  PA: 'Para',
-  PB: 'Paraiba',
-  PR: 'Parana',
+  PA: 'Pará',
+  PB: 'Paraíba',
+  PR: 'Paraná',
   PE: 'Pernambuco',
-  PI: 'Piaui',
+  PI: 'Piauí',
   RJ: 'Rio de Janeiro',
   RN: 'Rio Grande do Norte',
   RS: 'Rio Grande do Sul',
-  RO: 'Rondonia',
+  RO: 'Rondônia',
   RR: 'Roraima',
   SC: 'Santa Catarina',
-  SP: 'Sao Paulo',
+  SP: 'São Paulo',
   SE: 'Sergipe',
   TO: 'Tocantins',
 }
@@ -39,12 +40,6 @@ interface LicitacaoItem {
   orgaoNome: string
 }
 
-interface SearchResponse {
-  items?: LicitacaoItem[]
-  data?: LicitacaoItem[]
-  total?: number
-}
-
 export function generateMetadata({
   params,
 }: {
@@ -55,30 +50,15 @@ export function generateMetadata({
     const nomeEstado = ESTADOS[uf] || uf
     const nomeCidade = decodeURIComponent(cidade)
     return {
-      title: `Licitacoes em ${nomeCidade} - ${nomeEstado} | Painel PNCP`,
-      description: `Acompanhe licitacoes publicadas em ${nomeCidade}, ${nomeEstado} no Portal Nacional de Contratacoes Publicas.`,
+      title: `Licitações em ${nomeCidade} - ${nomeEstado} | Painel PNCP`,
+      description: `Acompanhe licitações publicadas em ${nomeCidade}, ${nomeEstado} no Portal Nacional de Contratações Públicas.`,
       openGraph: {
-        title: `Licitacoes em ${nomeCidade} - ${nomeEstado} | Painel PNCP`,
-        description: `Acompanhe licitacoes publicadas em ${nomeCidade}, ${nomeEstado}.`,
+        title: `Licitações em ${nomeCidade} - ${nomeEstado} | Painel PNCP`,
+        description: `Acompanhe licitações publicadas em ${nomeCidade}, ${nomeEstado}.`,
         type: 'website',
       },
     }
   })
-}
-
-async function fetchByCidade(uf: string, cidade: string): Promise<LicitacaoItem[]> {
-  try {
-    const base = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
-    const res = await fetch(
-      `${base}/api/pncp/search/?q=licitacao&uf=${uf.toUpperCase()}&municipio=${encodeURIComponent(cidade)}&pagina=1`,
-      { next: { revalidate: 120 } }
-    )
-    if (!res.ok) return []
-    const data: SearchResponse = await res.json()
-    return data.items ?? data.data ?? []
-  } catch {
-    return []
-  }
 }
 
 function formatDate(dateStr: string): string {
@@ -98,14 +78,14 @@ export default async function CidadePage({
   const uf = estado.toUpperCase()
   const nomeEstado = ESTADOS[uf] || uf
   const nomeCidade = decodeURIComponent(cidade)
-  const licitacoes = await fetchByCidade(uf, nomeCidade)
+  const licitacoes = (await fetchSeoLicitacoes({ q: 'licitacao', uf, municipio: nomeCidade })) as unknown as LicitacaoItem[]
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-6 py-10">
         <nav className="text-sm text-gray-400 mb-4">
           <Link href="/licitacoes" className="hover:text-blue-600">
-            Licitacoes
+            Licitações
           </Link>
           <span className="mx-2">/</span>
           <Link href={`/licitacoes/${uf}`} className="hover:text-blue-600">
@@ -116,14 +96,14 @@ export default async function CidadePage({
         </nav>
 
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Licitacoes em {nomeCidade} - {nomeEstado}
+          Licitações em {nomeCidade} - {nomeEstado}
         </h1>
         <p className="text-gray-500 mb-8">
           Resultados recentes para esta cidade.
         </p>
 
         {licitacoes.length === 0 && (
-          <p className="text-gray-400">Nenhuma licitacao encontrada para esta cidade.</p>
+          <p className="text-gray-400">Nenhuma licitação encontrada para esta cidade.</p>
         )}
 
         <ul className="space-y-4">

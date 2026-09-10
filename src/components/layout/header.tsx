@@ -180,6 +180,7 @@ function MobileNav({
       title: 'Analisar',
       links: [
         { href: '/precos', label: 'Mapa de Preços' },
+        { href: '/precos-inteligentes', label: 'Pesquisa de Preços' },
         { href: '/concorrentes', label: 'Concorrentes' },
         { href: '/analise-edital', label: 'Análise de Edital' },
         { href: '/score', label: 'Score' },
@@ -200,6 +201,14 @@ function MobileNav({
         { href: '/checklist', label: 'Checklist' },
         { href: '/justificativa', label: 'Justificativa' },
         { href: '/documentos', label: 'Documentos' },
+      ],
+    },
+    {
+      title: 'Contratações',
+      links: [
+        { href: '/montagem-processo', label: 'Montar Processo' },
+        { href: '/meus-processos', label: 'Meus Processos' },
+        { href: '/sinapi', label: 'SINAPI' },
       ],
     },
     {

@@ -1,32 +1,33 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { fetchSeoLicitacoes } from '@/lib/seo-data'
 
 const ESTADOS: Record<string, string> = {
   AC: 'Acre',
   AL: 'Alagoas',
-  AP: 'Amapa',
+  AP: 'Amapá',
   AM: 'Amazonas',
   BA: 'Bahia',
-  CE: 'Ceara',
+  CE: 'Ceará',
   DF: 'Distrito Federal',
-  ES: 'Espirito Santo',
-  GO: 'Goias',
-  MA: 'Maranhao',
+  ES: 'Espírito Santo',
+  GO: 'Goiás',
+  MA: 'Maranhão',
   MT: 'Mato Grosso',
   MS: 'Mato Grosso do Sul',
   MG: 'Minas Gerais',
-  PA: 'Para',
-  PB: 'Paraiba',
-  PR: 'Parana',
+  PA: 'Pará',
+  PB: 'Paraíba',
+  PR: 'Paraná',
   PE: 'Pernambuco',
-  PI: 'Piaui',
+  PI: 'Piauí',
   RJ: 'Rio de Janeiro',
   RN: 'Rio Grande do Norte',
   RS: 'Rio Grande do Sul',
-  RO: 'Rondonia',
+  RO: 'Rondônia',
   RR: 'Roraima',
   SC: 'Santa Catarina',
-  SP: 'Sao Paulo',
+  SP: 'São Paulo',
   SE: 'Sergipe',
   TO: 'Tocantins',
 }
@@ -39,42 +40,20 @@ interface LicitacaoItem {
   municipioNome: string
   orgaoNome: string
 }
-
-interface SearchResponse {
-  items?: LicitacaoItem[]
-  data?: LicitacaoItem[]
-  total?: number
-}
-
 export function generateMetadata({ params }: { params: Promise<{ estado: string }> }): Promise<Metadata> {
   return params.then(({ estado }) => {
     const uf = estado.toUpperCase()
     const nome = ESTADOS[uf] || uf
     return {
-      title: `Licitacoes em ${nome} (${uf}) | Painel PNCP`,
-      description: `Acompanhe licitacoes publicadas em ${nome} no Portal Nacional de Contratacoes Publicas.`,
+      title: `Licitações em ${nome} (${uf}) | Painel PNCP`,
+      description: `Acompanhe licitações publicadas em ${nome} no Portal Nacional de Contratações Públicas.`,
       openGraph: {
-        title: `Licitacoes em ${nome} (${uf}) | Painel PNCP`,
-        description: `Acompanhe licitacoes publicadas em ${nome}.`,
+        title: `Licitações em ${nome} (${uf}) | Painel PNCP`,
+        description: `Acompanhe licitações publicadas em ${nome}.`,
         type: 'website',
       },
     }
   })
-}
-
-async function fetchByEstado(uf: string): Promise<LicitacaoItem[]> {
-  try {
-    const base = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
-    const res = await fetch(
-      `${base}/api/pncp/search/?q=licitacao&uf=${uf.toUpperCase()}&pagina=1`,
-      { next: { revalidate: 120 } }
-    )
-    if (!res.ok) return []
-    const data: SearchResponse = await res.json()
-    return data.items ?? data.data ?? []
-  } catch {
-    return []
-  }
 }
 
 function formatDate(dateStr: string): string {
@@ -89,28 +68,28 @@ export default async function EstadoPage({ params }: { params: Promise<{ estado:
   const { estado } = await params
   const uf = estado.toUpperCase()
   const nome = ESTADOS[uf] || uf
-  const licitacoes = await fetchByEstado(uf)
+  const licitacoes = (await fetchSeoLicitacoes({ q: 'licitacao', uf })) as unknown as LicitacaoItem[]
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-6 py-10">
         <nav className="text-sm text-gray-400 mb-4">
           <Link href="/licitacoes" className="hover:text-blue-600">
-            Licitacoes
+            Licitações
           </Link>
           <span className="mx-2">/</span>
           <span className="text-gray-700">{nome}</span>
         </nav>
 
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Licitacoes em {nome} ({uf})
+          Licitações em {nome} ({uf})
         </h1>
         <p className="text-gray-500 mb-8">
           Resultados recentes filtrados por UF.
         </p>
 
         {licitacoes.length === 0 && (
-          <p className="text-gray-400">Nenhuma licitacao encontrada para este estado.</p>
+          <p className="text-gray-400">Nenhuma licitação encontrada para este estado.</p>
         )}
 
         <ul className="space-y-4">

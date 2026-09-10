@@ -5,7 +5,7 @@
   "compatibility_flags": [
     "nodejs_compat"
   ],
-  "main": "vinext/server/fetch-handler",
+  "main": "./worker/index.ts",
   "assets": {
     "directory": "dist/client",
     "not_found_handling": "none",
@@ -17,10 +17,17 @@
   "images": {
     "binding": "IMAGES"
   },
+  "ai": {
+    "binding": "AI"
+  },
   "kv_namespaces": [
     {
       "binding": "VINEXT_KV_CACHE",
       "id": "6ef1b94f68384d4c9660812402abe77c"
+    },
+    {
+      "binding": "EDITAIS_KV",
+      "id": "8bb948ac1ff8446b8fdebce710c01d60"
     }
-  ]
+  ],
 }

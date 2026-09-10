@@ -27,6 +27,8 @@ export default function Footer() {
             <div className="space-y-2">
               <FooterLink href="/precos">Mapa de Preços</FooterLink>
               <FooterLink href="/concorrentes">Concorrentes</FooterLink>
+              <FooterLink href="/analise-edital">Análise de Edital</FooterLink>
+              <FooterLink href="/ia-licitacoes">IA de Licitações</FooterLink>
               <FooterLink href="/alertas">Alertas</FooterLink>
               <FooterLink href="/relatorios">Relatórios</FooterLink>
             </div>

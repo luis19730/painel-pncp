@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import Logo from '@/components/layout/logo'
 import {
   Search, Radar, Bell, TrendingUp, Users, FileSearch, Gauge,
-  Sparkles, BookOpen, Layers, ShieldAlert,
+  Sparkles, Layers, ShieldAlert,
   ListChecks, FileCheck, FolderOpen,
   Star, FileBarChart, Calendar,
   Building2, Settings, HelpCircle, Type
@@ -26,17 +26,18 @@ const navGroups = [
     label: 'ANALISAR',
     items: [
       { href: '/precos', label: 'Mapa de Preços', icon: TrendingUp },
+      { href: '/precos-inteligentes', label: 'Pesquisa de Preços', icon: TrendingUp },
       { href: '/concorrentes', label: 'Concorrentes', icon: Users },
-      { href: '/estudo-tecnico', label: 'Análise de Edital', icon: FileSearch },
+      { href: '/analise-edital', label: 'Análise de Edital', icon: FileSearch },
       { href: '/score', label: 'Score', icon: Gauge },
     ],
   },
   {
     label: 'INTELIGÊNCIA',
     items: [
-      { href: '/ia', label: 'IA', icon: Sparkles, premium: true },
-      { href: '/estudo-tecnico', label: 'Estudo Técnico', icon: BookOpen },
-      { href: '/modalidade', label: 'Modalidade', icon: Layers },
+      { href: '/ia-licitacoes', label: 'IA', icon: Sparkles, premium: true },
+      { href: '/modalidades', label: 'Modalidades', icon: Layers },
+      { href: '/estudo-tecnico', label: 'Estudo Técnico', icon: FileSearch },
       { href: '/matriz-riscos', label: 'Matriz de Riscos', icon: ShieldAlert },
     ],
   },
@@ -46,6 +47,14 @@ const navGroups = [
       { href: '/checklist', label: 'Checklist', icon: ListChecks },
       { href: '/justificativa', label: 'Justificativa', icon: FileCheck },
       { href: '/documentos', label: 'Documentos', icon: FolderOpen },
+    ],
+  },
+  {
+    label: 'CONTRATAÇÕES',
+    items: [
+      { href: '/montagem-processo', label: 'Montar Processo', icon: FileCheck },
+      { href: '/meus-processos', label: 'Meus Processos', icon: FolderOpen },
+      { href: '/sinapi', label: 'SINAPI', icon: Layers },
     ],
   },
   {
@@ -61,7 +70,8 @@ const navGroups = [
 const bottomNav = [
   { href: '/perfil', label: 'Perfil', icon: Building2 },
   { href: '/configuracoes', label: 'Configurações', icon: Settings },
-  { href: '/planos', label: 'Planos', icon: Type, external: true },
+  { href: '/minha-assinatura', label: 'Minha Assinatura', icon: Type },
+  { href: '/planos', label: 'Planos', icon: Building2, external: true },
   { href: '/ajuda', label: 'Ajuda', icon: HelpCircle },
 ]
 

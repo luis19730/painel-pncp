@@ -15,10 +15,11 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
               Sua central de inteligência em licitações públicas
             </h2>
             <p className="text-white/90 text-lg mb-8 max-w-md">
-              Encontre, analise e acompanhe as oportunidades mais relevantes para sua empresa.
+              Encontre, analise e acompanhe as oportunidades mais relevantes. Inclui Pesquisa de Preços
+              Inteligente com geração de relatório para contratação pública.
             </p>
             <div className="space-y-3">
-              {['Busca inteligente no PNCP', 'Score de oportunidade', 'Alertas e radar personalizado', 'Mapa de preços'].map(item => (
+              {['Pesquisa de Preços Inteligente', 'Geração de relatório de preços', 'Busca inteligente no PNCP', 'Score de oportunidade', 'Alertas e radar personalizado', 'Mapa de preços'].map(item => (
                 <div key={item} className="flex items-center gap-3">
                   <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-sm">✓</div>
                   <span>{item}</span>

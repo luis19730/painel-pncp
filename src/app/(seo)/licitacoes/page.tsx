@@ -1,14 +1,15 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { fetchSeoLicitacoes } from '@/lib/seo-data'
 
 export const metadata: Metadata = {
-  title: 'Licitacoes no Brasil | Painel PNCP',
+  title: 'Licitações no Brasil | Painel PNCP',
   description:
-    'Acompanhe licitacoes publicadas no Portal Nacional de Contratacoes Publicas. Filtre por estado, cidade e categoria.',
+    'Acompanhe licitações publicadas no Portal Nacional de Contratações Públicas. Filtre por estado, cidade e categoria.',
   openGraph: {
-    title: 'Licitacoes no Brasil | Painel PNCP',
+    title: 'Licitações no Brasil | Painel PNCP',
     description:
-      'Acompanhe licitacoes publicadas no Portal Nacional de Contratacoes Publicas.',
+      'Acompanhe licitações publicadas no Portal Nacional de Contratações Públicas.',
     type: 'website',
   },
 }
@@ -23,27 +24,6 @@ interface LicitacaoItem {
   orgaoNome: string
 }
 
-interface SearchResponse {
-  items?: LicitacaoItem[]
-  data?: LicitacaoItem[]
-  total?: number
-}
-
-async function fetchLicitacoes(): Promise<LicitacaoItem[]> {
-  try {
-    const base = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
-    const res = await fetch(
-      `${base}/api/pncp/search/?q=licitacao&tipos_documento=edital&pagina=1`,
-      { next: { revalidate: 120 } }
-    )
-    if (!res.ok) return []
-    const data: SearchResponse = await res.json()
-    return data.items ?? data.data ?? []
-  } catch {
-    return []
-  }
-}
-
 function formatDate(dateStr: string): string {
   try {
     return new Date(dateStr).toLocaleDateString('pt-BR')
@@ -53,18 +33,18 @@ function formatDate(dateStr: string): string {
 }
 
 export default async function LicitacoesPage() {
-  const licitacoes = await fetchLicitacoes()
+  const licitacoes = (await fetchSeoLicitacoes()) as unknown as LicitacaoItem[]
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-6 py-10">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Licitacoes no Brasil</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Licitações no Brasil</h1>
         <p className="text-gray-500 mb-8">
-          Resultados recentes do Portal Nacional de Contratacoes Publicas.
+          Resultados recentes do Portal Nacional de Contratações Públicas.
         </p>
 
         {licitacoes.length === 0 && (
-          <p className="text-gray-400">Nenhuma licitacao encontrada no momento.</p>
+          <p className="text-gray-400">Nenhuma licitação encontrada no momento.</p>
         )}
 
         <ul className="space-y-4">

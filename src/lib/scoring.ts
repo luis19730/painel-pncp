@@ -51,12 +51,12 @@ export function calculateScore(
   if (profile.estados?.length > 0) {
     if (profile.estados.includes(opp.uf)) {
       locationScore += 15
-      explanations.push(`Estado compativel: ${opp.uf}`)
+      explanations.push(`Estado compatível: ${opp.uf}`)
       if (profile.municipios?.length > 0) {
         const mNorm = profile.municipios.map(normalizar)
         if (mNorm.includes(normalizar(opp.municipio))) {
           locationScore += 5
-          explanations.push(`Municipio compativel: ${opp.municipio}`)
+          explanations.push(`Município compatível: ${opp.municipio}`)
         }
       }
     }
@@ -88,7 +88,7 @@ export function calculateScore(
     explanations.push(`${diasRestantes} dias restantes.`)
   } else if (diasRestantes > 3) {
     deadlineScore = 10
-    explanations.push(`Prazo proximo: ${diasRestantes} dias.`)
+    explanations.push(`Prazo próximo: ${diasRestantes} dias.`)
   } else if (diasRestantes > 0) {
     deadlineScore = 5
     explanations.push(`Prazo curto: ${diasRestantes} dias.`)
@@ -106,7 +106,7 @@ export function calculateScore(
     const matchedSeg = segWords.filter(w => textoAll.includes(w))
     if (matchedSeg.length > 0) {
       segmentScore = Math.min(15, 5 + matchedSeg.length * 5)
-      explanations.push(`Segmento compativel.`)
+      explanations.push(`Segmento compatível.`)
     }
   }
 

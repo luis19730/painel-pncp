@@ -3,6 +3,7 @@ import Footer from '@/components/layout/footer'
 import Logo from '@/components/layout/logo'
 import ThemeToggle from '@/components/layout/theme-toggle'
 import Button from '@/components/ui/button'
+import MarketingMenu from '@/components/layout/marketing-menu'
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -23,7 +24,8 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               Entrar
             </Link>
             <ThemeToggle />
-            <Link href="/cadastro">
+            <MarketingMenu />
+            <Link href="/cadastro" className="hidden sm:inline-flex">
               <Button size="sm">Começar agora</Button>
             </Link>
           </div>

@@ -1,0 +1,78 @@
+# ============================================================================
+# Evolution API  (WhatsApp — envio ilimitado e sem custo)
+#
+# Voltado para testes iniciais: usa a v1.8 (sem MongoDB), sobe em ~1 min e o
+# QR conecta direto. Para produção com retenção de sessão, migre para a v2.x
+# + MongoDB (veja o comentário no fim do arquivo).
+#
+# Para subir:
+#   docker compose up -d
+#
+# Depois:
+#   - Crie a instância:
+#       curl -X POST http://localhost:8080/instance/create \
+#         -H "apikey: ${EVOLUTION_API_KEY}" -H "Content-Type: application/json" \
+#         -d '{ "instanceName": "painel-pncp", "qrcode": true }'
+#   - Conecte o QR em http://localhost:8080/manager  (instância "painel-pncp")
+#   - Teste o envio:
+#       curl -X POST http://localhost:8080/message/sendText/painel-pncp \
+#         -H "apikey: ${EVOLUTION_API_KEY}" -H "Content-Type: application/json" \
+#         -d '{ "number": "5511999998888", "text": "Teste" }'
+#
+# E defina estes secrets no worker (wrangler):
+#   EVOLUTION_API_URL  = http://SEU_SERVIDOR:8080
+#   EVOLUTION_INSTANCE = painel-pncp
+#   EVOLUTION_API_KEY  = <a mesma chave abaixo>
+# ============================================================================
+
+services:
+  evolution-api:
+    image: atendai/evolution-api:v1.8.0
+    container_name: evolution-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY:-troque-esta-chave-por-um-valor-longo-e-aleatorio}
+      # HTTPS desativado por padrão (expectativa: acessar por http). Em produção
+      # coloque atrás de um proxy/HTTPS e mude para true.
+    volumes:
+      - evolution_instances:/evolution/instances
+      - evolution_store:/evolution/store
+
+volumes:
+  evolution_instances:
+  evolution_store:
+
+# ----------------------------------------------------------------------------
+# PARA PRODUÇÃO (v2.x + MongoDB) — substitua o serviço acima por:
+#
+# services:
+#   evolution-api:
+#     image: atendai/evolution-api:latest
+#     restart: unless-stopped
+#     ports:
+#       - "8080:8080"
+#     environment:
+#       - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY:-troque-esta-chave}
+#       - DATABASE_ENABLED=true
+#       - DATABASE_CONNECTION_URI=mongodb://evolution:evolution@mongo:27017/evolution
+#       - DATABASE_SAVE_DATA_INSTANCE=true
+#     depends_on:
+#       - mongo
+#     volumes:
+#       - evolution_instances:/evolution/instances
+#   mongo:
+#     image: mongo:7
+#     restart: unless-stopped
+#     environment:
+#       MONGO_INITDB_ROOT_USERNAME: evolution
+#       MONGO_INITDB_ROOT_PASSWORD: evolution
+#     volumes:
+#       - mongo_data:/data/db
+#
+# volumes:
+#   evolution_instances:
+#   evolution_store:
+#   mongo_data:
+# ----------------------------------------------------------------------------

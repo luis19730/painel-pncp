@@ -1,0 +1,30 @@
+name: Trial — expiração diária
+
+# Dispara o endpoint /api/cron/trial-expirado, que envia o e-mail de "período
+# de teste terminou" para os usuários cujo trial expirou e que não possuem
+# plano ativo. O endpoint é idempotente (coluna trial_email_enviado_em), então
+# rodar mais de uma vez por dia é seguro.
+#
+# Secrets necessários (Settings > Secrets and variables > Actions):
+#   - PNCP_BASE_URL : https://www.painelpncp.com.br
+#   - CRON_SECRET   : mesmo valor do secret CRON_SECRET configurado no worker
+
+on:
+  schedule:
+    # 09:00 BRT (America/Sao_Paulo, UTC-3) = 12:00 UTC
+    - cron: '0 12 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  trial-expirado:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Disparar envio de e-mails de expiração de trial
+        env:
+          PNCP_BASE_URL: ${{ secrets.PNCP_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -fsS --fail-with-body --max-time 120 \
+            -H "x-cron-secret: ${CRON_SECRET}" \
+            "${PNCP_BASE_URL}/api/cron/trial-expirado"

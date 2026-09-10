@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/theme-provider";
+import PageviewTracker from "@/components/analytics/pageview-tracker";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-display" });
@@ -12,14 +13,14 @@ export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
   title: {
     template: "%s | Painel PNCP",
-    default: "Painel PNCP - Inteligencia para licitacoes publicas",
+    default: "Painel PNCP - Inteligência para licitações públicas",
   },
   description:
-    "Central de inteligencia para encontrar, analisar e acompanhar oportunidades de licitacoes publicas no PNCP.",
+    "Central de inteligência para encontrar, analisar e acompanhar oportunidades de licitações públicas no PNCP.",
   openGraph: {
-    title: "Painel PNCP - Inteligencia para licitacoes publicas",
+    title: "Painel PNCP - Inteligência para licitações públicas",
     description:
-      "Monitore licitacoes, analise precos, acompanhe concorrentes e descubra as oportunidades mais relevantes para sua empresa.",
+      "Monitore licitações, analise preços, acompanhe concorrentes e descubra as oportunidades mais relevantes para sua empresa.",
     type: "website",
     locale: "pt_BR",
     url: APP_URL,
@@ -27,9 +28,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Painel PNCP - Inteligencia para licitacoes publicas",
+    title: "Painel PNCP - Inteligência para licitações públicas",
     description:
-      "Central de inteligencia para encontrar, analisar e acompanhar oportunidades publicas.",
+      "Central de inteligência para encontrar, analisar e acompanhar oportunidades públicas.",
   },
 };
 
@@ -42,6 +43,7 @@ export default function RootLayout({
     <html lang="pt-BR" suppressHydrationWarning>
       <body className={`${inter.variable} ${jakarta.variable} font-sans`}>
         <ThemeProvider>{children}</ThemeProvider>
+        <PageviewTracker />
       </body>
     </html>
   );

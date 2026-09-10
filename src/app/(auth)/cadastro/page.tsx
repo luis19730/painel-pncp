@@ -1,138 +1,85 @@
-'use client'
-
-import { useState } from 'react'
+import type { Metadata } from 'next'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
-import Button from '@/components/ui/button'
-import Input from '@/components/ui/input'
-import GoogleAuthButton from '@/components/auth/google-auth-button'
+import CadastroForm from '@/components/auth/cadastro-form'
+
+export const metadata: Metadata = {
+  title: 'Criar conta — Pesquisa de Preços Inteligente',
+  description:
+    'Crie sua conta no Painel PNCP e tenha acesso à Pesquisa de Preços Inteligente para licitações: pesquise preços, organize e compare referências e gere relatórios para auxiliar na preparação dos seus processos de contratação pública.',
+  openGraph: {
+    title: 'Criar conta — Pesquisa de Preços Inteligente',
+    description:
+      'Acesso à Pesquisa de Preços Inteligente e a outras ferramentas do Painel PNCP para compras públicas e contratações.',
+    type: 'website',
+    siteName: 'Painel PNCP',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Criar conta — Pesquisa de Preços Inteligente',
+    description:
+      'Crie sua conta e utilize ferramentas inteligentes de pesquisa de preços para contratação pública.',
+  },
+}
 
 export default function CadastroPage() {
-  const supabase = createClient()
-
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
-  const [loading, setLoading] = useState(false)
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setSuccess('')
-
-    if (password !== confirmPassword) {
-      setError('As senhas não coincidem.')
-      return
-    }
-
-    if (password.length < 6) {
-      setError('A senha deve ter pelo menos 6 caracteres.')
-      return
-    }
-
-    setLoading(true)
-
-    try {
-      const { error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { name },
-        },
-      })
-
-      if (authError) {
-        const msg =
-          authError.message === 'User already registered'
-            ? 'Este e-mail já está cadastrado.'
-            : authError.message
-        setError(msg)
-        setLoading(false)
-        return
-      }
-
-      setSuccess('Verifique seu e-mail para confirmar o cadastro.')
-      setLoading(false)
-    } catch {
-      setError('Não foi possível conectar ao servidor. Tente novamente.')
-      setLoading(false)
-    }
-  }
-
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-700 p-8 shadow-xl shadow-slate-200/40 dark:shadow-none">
-      <h1 className="text-2xl font-extrabold font-display text-slate-900 dark:text-white mb-1">Criar conta</h1>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-        Comece a encontrar licitações públicas gratuitamente.
-      </p>
-
-      {error && (
-        <div className="mb-4 px-4 py-3 rounded-xl bg-danger-soft dark:bg-red-500/10 border border-danger/20 text-sm text-danger">
-          {error}
+    <div className="space-y-6">
+      {/* Bloco comercial acima do formulário */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-700 p-8 shadow-xl shadow-slate-200/40 dark:shadow-none">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-soft dark:bg-primary/10 text-primary text-xs font-semibold mb-4">
+          Pesquisa de Preços Inteligente
         </div>
-      )}
+        <h2 className="text-2xl font-extrabold font-display text-slate-900 dark:text-white mb-2">
+          Tenha acesso à Pesquisa de Preços Inteligente
+        </h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
+          Crie sua conta e utilize ferramentas inteligentes para pesquisar preços, analisar referências e gerar
+          relatórios para auxiliar na preparação dos seus processos de contratação pública.
+        </p>
 
-      {success && (
-        <div className="mb-4 px-4 py-3 rounded-xl bg-success-soft dark:bg-emerald-500/10 border border-success/20 text-sm text-success">
-          {success}
-        </div>
-      )}
-
-      <GoogleAuthButton mode="signup" />
-
-      <div className="flex items-center gap-3 my-6">
-        <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
-        <span className="text-xs font-medium text-slate-400 dark:text-slate-500">ou</span>
-        <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+          {[
+            'Pesquisa de preços inteligente',
+            'Organização das referências encontradas',
+            'Comparação de preços',
+            'Geração de relatório',
+            'Ferramentas para apoio à contratação pública',
+            'Acesso a outras funcionalidades do Painel PNCP',
+          ].map((item) => (
+            <li key={item} className="flex items-start gap-2">
+              <span className="w-5 h-5 shrink-0 rounded-full bg-success-soft dark:bg-emerald-500/10 flex items-center justify-center mt-0.5">
+                <svg viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3 text-success">
+                  <path fillRule="evenodd" d="M16.7 5.3a1 1 0 0 1 0 1.4l-7.5 7.5a1 1 0 0 1-1.4 0l-3.5-3.5a1 1 0 1 1 1.4-1.4l2.8 2.79 6.8-6.8a1 1 0 0 1 1.4 0Z" clipRule="evenodd" />
+                </svg>
+              </span>
+              <span className="text-slate-600 dark:text-slate-300">{item}</span>
+            </li>
+          ))}
+        </ul>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Input
-          label="Nome"
-          type="text"
-          placeholder="Seu nome"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-        <Input
-          label="E-mail"
-          type="email"
-          placeholder="seu@email.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <Input
-          label="Senha"
-          type="password"
-          placeholder="Mínimo 6 caracteres"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-        <Input
-          label="Confirmar senha"
-          type="password"
-          placeholder="Repita a senha"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          required
-        />
-        <Button type="submit" className="w-full" disabled={loading} loading={loading}>
-          {loading ? 'Criando conta...' : 'Criar conta'}
-        </Button>
-      </form>
+      {/* Formulário (funcionalidade inalterada) */}
+      <CadastroForm />
 
-      <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
-        Já tem conta?{' '}
-        <Link href="/login" className="text-primary hover:text-primary-hover font-semibold">
-          Entrar
+      {/* Destaque de marketing */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-700 p-7 shadow-xl shadow-slate-200/40 dark:shadow-none text-center">
+        <h2 className="text-xl font-extrabold font-display text-slate-900 dark:text-white mb-2">
+          Mais inteligência. Menos trabalho manual.
+        </h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-5">
+          Automatize etapas da sua pesquisa de preços e tenha as informações organizadas para facilitar a
+          elaboração e instrução do processo.
+        </p>
+        <Link href="/precos-inteligentes">
+          <span className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-secondary px-6 py-3 text-sm font-bold text-white shadow-lg shadow-primary/25 hover:opacity-95 transition-all hover:scale-[1.02]">
+            Conhecer o Painel PNCP
+          </span>
         </Link>
-      </p>
+        <p className="block mt-4 text-[11px] text-slate-400">
+          A Pesquisa de Preços inteligente auxilia na busca e organização de referências. A análise,
+          decisão e a aprovação permanecem sob responsabilidade dos agentes competentes.
+        </p>
+      </div>
     </div>
   )
 }

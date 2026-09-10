@@ -1,18 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { TrendingUp, FileText, Clock, AlertTriangle, Heart, DollarSign, Search, Radar, ArrowRight } from 'lucide-react';
-import FavoriteButton from '@/components/opportunities/favorite-button';
+import { TrendingUp, FileText, Clock, AlertTriangle, Heart, DollarSign, Search, Radar, ArrowRight, Building2, AlertCircle } from 'lucide-react';
 import OpportunityCard from '@/components/opportunities/opportunity-card';
 import StatCard from '@/components/ui/stat-card';
 import PageHeader from '@/components/ui/page-header';
+import DemoNotice from '@/components/ui/demo-notice';
 import { Badge } from '@/components/ui/badge';
-import { StatsSkeleton, CardSkeleton } from '@/components/ui/skeleton';
-import { formatCurrency, formatDate, getDaysUntil, getDeadlineColor, getStatusColor } from '@/lib/utils';
-import { mapItems } from '@/lib/pncp';
+import { StatsSkeleton } from '@/components/ui/skeleton';
+import { formatCurrency, normalizar } from '@/lib/utils';
 import { calculateScore } from '@/lib/scoring';
-import type { CompanyProfile } from '@/types';
+import { ITEMS } from '@/lib/market-data';
+import { computeDashboardMetrics, itemToOpportunity, filterQuery } from '@/lib/opportunity';
+import { createClient } from '@/lib/supabase/client';
+import { alertKey as alertStorageKey, favoriteKey as favoriteStorageKey } from '@/lib/storage-keys';
+import type { CompanyProfile, Opportunity } from '@/types';
 
 function loadProfile(): CompanyProfile | null {
   try {
@@ -39,77 +42,168 @@ function loadProfile(): CompanyProfile | null {
 }
 
 export default function DashboardPage() {
-  const [items, setItems] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
+  const [profile, setProfile] = useState<CompanyProfile | null>(null)
+  const [numFavoritos, setNumFavoritos] = useState(0)
+  const [numAlertas, setNumAlertas] = useState(0)
 
   useEffect(() => {
-    fetch('/api/pncp/search/?q=pregao&tipos_documento=edital&pagina=1')
-      .then((res) => res.json())
-      .then((data) => {
-        const mapped = mapItems(data.data || data.items || []);
-        const profile = loadProfile();
-        mapped.forEach(item => {
-          if (profile) {
-            const { total } = calculateScore(item, profile);
-            item.score = total;
-          }
-        });
-        setItems(mapped);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
+    let cancelled = false
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data }) => {
+      if (cancelled) return
+      const userId = data.user?.id ?? null
+      try {
+        setProfile(loadProfile())
+        const favs = JSON.parse(localStorage.getItem(favoriteStorageKey(userId)) || '[]')
+        const al = JSON.parse(localStorage.getItem(alertStorageKey(userId)) || '[]')
+        setNumFavoritos(Array.isArray(favs) ? favs.length : 0)
+        setNumAlertas(Array.isArray(al) ? al.length : 0)
+      } catch {
+        setError(true)
+        setNumFavoritos(0)
+        setNumAlertas(0)
+      }
+      setLoading(false)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
-  if (loading) return (
-    <div className="space-y-6">
-      <PageHeader title="Dashboard" description="Sua central de inteligência em licitações públicas" />
-      <StatsSkeleton />
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {[...Array(6)].map((_, i) => <CardSkeleton key={i} />)}
+  // Fonte ÚNICA de dados: ITEMS convertidos pela camada central.
+  const opps = useMemo<Opportunity[]>(() => ITEMS.map(itemToOpportunity), [])
+  const metrics = useMemo(() => computeDashboardMetrics(ITEMS), [])
+
+  const scored = useMemo(
+    () => opps.map((o) => ({ ...o, score: calculateScore(o, profile).total })).sort((a, b) => b.score - a.score),
+    [opps, profile]
+  )
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Dashboard" description="Sua central de inteligência em licitações públicas" />
+        <StatsSkeleton />
       </div>
-    </div>
-  );
+    )
+  }
 
-  const todayItems = items.filter((i) => getDaysUntil(i.dataEncerramento) === 0);
-  const soonItems = items.filter((i) => {
-    const d = getDaysUntil(i.dataEncerramento);
-    return d > 0 && d <= 3;
-  });
-  const totalValue = items.reduce((acc, i) => acc + (i.valor || 0), 0);
-  const hotItems = [...items].filter((i) => (i.score || 0) >= 70).sort((a, b) => (b.score || 0) - (a.score || 0));
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Dashboard" description="Sua central de inteligência em licitações públicas" />
+        <div className="card bg-white dark:bg-slate-900 dark:border-slate-800 text-center py-16 px-6">
+          <AlertCircle className="mx-auto w-10 h-10 text-red-500 mb-3" />
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            Não foi possível carregar os dados do painel. Tente novamente mais tarde.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  const hotItems = scored.filter((o) => o.score >= 70)
+
+  const cards = [
+    {
+      label: 'Oportunidades na base',
+      value: metrics.total,
+      icon: <FileText className="w-5 h-5" />,
+      accent: 'primary' as const,
+      hint: 'registros disponíveis',
+      href: '/oportunidades',
+    },
+    {
+      label: 'Abertas',
+      value: metrics.abertas,
+      icon: <Clock className="w-5 h-5" />,
+      accent: 'success' as const,
+      hint: 'com prazo em andamento/futuro',
+      href: '/oportunidades?status=aberta',
+    },
+    {
+      label: 'Encerradas',
+      value: metrics.encerradas,
+      icon: <AlertTriangle className="w-5 h-5" />,
+      accent: 'danger' as const,
+      hint: 'com prazo já encerrado',
+      href: '/oportunidades?status=encerrada',
+    },
+    {
+      label: 'Valor total',
+      value: formatCurrency(metrics.valorTotal),
+      icon: <DollarSign className="w-5 h-5" />,
+      accent: 'secondary' as const,
+      hint: 'soma dos valores dos registros',
+      href: '/oportunidades',
+    },
+    {
+      label: 'Favoritas',
+      value: numFavoritos,
+      icon: <Heart className="w-5 h-5" />,
+      accent: 'danger' as const,
+      hint: numFavoritos > 0 ? 'salvas no navegador' : 'nenhuma favorita no navegador',
+      href: '/favoritos',
+    },
+    {
+      label: 'Alertas ativos',
+      value: numAlertas,
+      icon: <AlertTriangle className="w-5 h-5" />,
+      accent: 'warning' as const,
+      hint: numAlertas > 0 ? 'cadastrados no navegador' : 'nenhum alerta no navegador',
+      href: '/alertas',
+    },
+    {
+      label: 'Top UF',
+      value: metrics.topUf,
+      icon: <Radar className="w-5 h-5" />,
+      accent: 'accent' as const,
+      hint: `${metrics.topUfCount} registros`,
+      href: metrics.topUf !== '—' ? filterQuery({ uf: metrics.topUf }) : undefined,
+    },
+    {
+      label: 'Top modalidade',
+      value: metrics.topModalidade,
+      icon: <TrendingUp className="w-5 h-5" />,
+      accent: 'primary' as const,
+      hint: `${metrics.topModalidadeCount} registros`,
+      href: metrics.topModalidade !== '—' ? filterQuery({ modalidade: metrics.topModalidade }) : undefined,
+    },
+  ]
 
   const cardItems = [
-    { href: '/oportunidades', title: 'Encontrar oportunidades', icon: Search, desc: 'Explore licitações relevantes', color: 'bg-primary text-white shadow-primary/25', cta: 'Explorar' },
-    { href: '/precos', title: 'Analisar preços', icon: TrendingUp, desc: 'Preços históricos do PNCP', color: 'bg-secondary text-white shadow-secondary/25', cta: 'Analisar' },
-    { href: '/meu-radar', title: 'Ativar radar', icon: Radar, desc: 'Receba só o que interessa', color: 'bg-success text-white shadow-success/25', cta: 'Ativar' },
-  ];
+    { href: '/oportunidades', title: 'Encontrar oportunidades', icon: Search, desc: 'Explore oportunidades na base demonstrativa', color: 'bg-primary text-white shadow-primary/25', cta: 'Explorar' },
+    { href: '/precos', title: 'Analisar preços', icon: TrendingUp, desc: 'Preços históricos da base demonstrativa', color: 'bg-secondary text-white shadow-secondary/25', cta: 'Analisar' },
+    { href: '/meu-radar', title: 'Ativar radar', icon: Radar, desc: 'Monitore buscas salvas', color: 'bg-success text-white shadow-success/25', cta: 'Ativar' },
+    { href: '/montagem-processo', title: 'Monte seu processo', icon: FileText, desc: 'Organize sua contratação passo a passo e acompanhe as pendências da instrução', color: 'bg-gradient-to-br from-primary to-secondary text-white shadow-primary/25', cta: 'Começar' },
+  ]
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Dashboard"
-        description="Visão geral das oportunidades para sua empresa"
-        badge={<Badge variant="success">Ao vivo</Badge>}
-      >
-        <Link
-          href="/busca"
-          className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-hover transition-colors"
-        >
-          <Search className="w-4 h-4" /> Buscar oportunidades
-        </Link>
-      </PageHeader>
+        description="Indicadores derivados dos registros da base demonstrativa local"
+      />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <StatCard label="Novas oportunidades" value={items.length} icon={<FileText className="w-5 h-5" />} accent="primary" hint="neste mês" />
-        <StatCard label="Compatíveis" value={items.filter((i) => (i.score || 0) >= 70).length} icon={<TrendingUp className="w-5 h-5" />} accent="success" hint="alta pontuação" />
-        <StatCard label="Encerram hoje" value={todayItems.length} icon={<Clock className="w-5 h-5" />} accent="danger" hint="oportunidades" />
-        <StatCard label="Encerram em 3 dias" value={soonItems.length} icon={<AlertTriangle className="w-5 h-5" />} accent="warning" hint="atenção" />
-        <StatCard label="Favoritas" value={0} icon={<Heart className="w-5 h-5" />} accent="danger" hint="salvas" />
-        <StatCard label="Valor total" value={formatCurrency(totalValue)} icon={<DollarSign className="w-5 h-5" />} accent="secondary" hint="em licitações" />
+      <DemoNotice>Indicadores analíticos calculados sobre a base de referência local. A API oficial do PNCP é utilizada nas páginas de Oportunidades e Busca.</DemoNotice>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {cards.map((c) => (
+          <StatCard
+            key={c.label}
+            label={c.label}
+            value={c.value}
+            icon={c.icon}
+            accent={c.accent}
+            hint={c.hint}
+            href={c.href || undefined}
+          />
+        ))}
       </div>
 
-      {/* Action cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {cardItems.map((card) => {
           const Icon = card.icon
           return (
@@ -128,71 +222,134 @@ export default function DashboardPage() {
         })}
       </div>
 
-      {/* Oportunidades quentes */}
+      <div className="card">
+        <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Distribuição por UF</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Registros por estado na base demonstrativa</p>
+        </div>
+        <div className="p-6">
+          {metrics.ufs.length > 0 ? (
+            <div className="space-y-3">
+              {metrics.ufs.map(([uf, count]) => {
+                const max = metrics.ufs[0][1]
+                return (
+                  <Link key={uf} href={filterQuery({ uf })} className="flex items-center gap-3 rounded-lg px-2 py-1 -mx-2 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
+                    <span className="w-10 text-xs font-semibold text-slate-600 dark:text-slate-300">{uf}</span>
+                    <div className="flex-1 h-3 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                      <div className="h-full rounded-full bg-gradient-to-r from-primary to-secondary" style={{ width: `${(count / max) * 100}%` }} />
+                    </div>
+                    <span className="w-10 text-right text-xs font-semibold text-slate-700 dark:text-slate-200">{count}</span>
+                  </Link>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-400">—</p>
+          )}
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <div className="card">
+          <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Por modalidade</h2>
+          </div>
+          <div className="p-6">
+            {metrics.modalidades.length > 0 ? (
+              <ul className="space-y-2">
+                {metrics.modalidades.map(([m, count]) => (
+                  <li key={m} className="text-sm text-slate-600 dark:text-slate-300 flex items-center gap-2">
+                    <Link href={filterQuery({ modalidade: m })} className="flex-1 hover:text-primary transition-colors">{m}</Link>
+                    <b className="text-slate-700 dark:text-slate-200">{count}</b>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-slate-400">—</p>
+            )}
+          </div>
+        </div>
+        <div className="card">
+          <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Top órgãos</h2>
+          </div>
+          <div className="p-6">
+            {metrics.orgaos.length > 0 ? (
+              <ul className="space-y-2">
+                {metrics.orgaos.map(([o, count]) => (
+                  <li key={o} className="text-sm text-slate-600 dark:text-slate-300 flex items-start gap-2">
+                    <Building2 className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+                    <span className="flex-1">{o}</span>
+                    <b className="text-slate-700 dark:text-slate-200">{count}</b>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-slate-400">—</p>
+            )}
+          </div>
+        </div>
+      </div>
+
       <div>
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              🔥 Oportunidades quentes
+              🔥 Oportunidades com maior compatibilidade
             </h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Maior compatibilidade com seu perfil</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Pontuação derivada do seu perfil sobre os registros da base</p>
           </div>
           <Link href="/oportunidades" className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary-hover">
             Ver todas <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {(hotItems.length > 0 ? hotItems : items).slice(0, 6).map((item) => (
-            <OpportunityCard key={item.id} item={item} />
-          ))}
-        </div>
+        {profile ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {(hotItems.length > 0 ? hotItems : scored).slice(0, 6).map((item) => (
+              <OpportunityCard key={item.id} item={item} />
+            ))}
+          </div>
+        ) : (
+          <div className="card bg-white dark:bg-slate-900 dark:border-slate-800 p-8 text-center">
+            <p className="text-slate-600 dark:text-slate-300 font-medium">Configure seu perfil para personalizar as recomendações.</p>
+            <Link
+              href="/perfil"
+              className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-hover transition-colors"
+            >
+              Configurar perfil <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        )}
       </div>
 
-      {/* Recommended list */}
       <div className="card">
         <div className="p-6 border-b border-slate-100 dark:border-slate-800">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Recomendadas para você</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Licitações com maior compatibilidade com seu perfil</p>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Registros da base por valor</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Maiores valores entre os registros demonstrativos</p>
         </div>
         <div className="divide-y divide-slate-100 dark:divide-slate-800">
-          {items.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 dark:text-slate-500">
-              Nenhuma oportunidade encontrada no momento.
-            </div>
-          ) : (
-            items.slice(0, 8).map((item) => (
-              <div key={item.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
+          {scored.slice(0, 8).map((item) => (
+            <div key={item.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  {profile && (
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-xs font-bold text-slate-900 dark:text-white">{item.score || 0}/100</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getStatusColor(item.situacao)}`}>
-                        {item.situacao || 'Aberta'}
-                      </span>
+                      <Badge variant={normalizar(item.situacao).includes('abert') || normalizar(item.situacao).includes('andamento') ? 'success' : item.situacao === 'Sem data' ? 'warning' : 'danger'}>{item.situacao}</Badge>
                     </div>
-                    <h3 className="text-sm font-medium text-slate-900 dark:text-white truncate">{item.objeto}</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{item.orgao}</p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    {item.valor > 0 && (
-                      <p className="text-sm font-semibold text-slate-900 dark:text-white">{formatCurrency(item.valor)}</p>
-                    )}
-                    <p className={`text-xs mt-1 font-medium ${getDeadlineColor(getDaysUntil(item.dataEncerramento))}`}>
-                      {getDaysUntil(item.dataEncerramento) === 0
-                        ? 'Encerra hoje'
-                        : `${getDaysUntil(item.dataEncerramento)} dias restantes`}
-                    </p>
-                  </div>
+                  )}
+                  <h3 className="text-sm font-medium text-slate-900 dark:text-white truncate">{item.objeto}</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{item.orgao} · {item.municipio}/{item.uf}</p>
                 </div>
-                <div className="flex items-center gap-3 mt-2 text-xs text-slate-400 dark:text-slate-500">
-                  <FavoriteButton pncpId={item.id} />
-                  {item.modalidade && <span>{item.modalidade}</span>}
-                  {item.uf && <span>{item.uf}</span>}
-                  {item.dataEncerramento && <span>Prazo: {formatDate(item.dataEncerramento)}</span>}
+                <div className="text-right shrink-0">
+                  {item.valor > 0 && (
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{formatCurrency(item.valor)}</p>
+                  )}
+                  <p className="text-xs mt-1 text-slate-400">{item.modalidade}</p>
                 </div>
               </div>
-            ))
-          )}
+            </div>
+          ))}
         </div>
       </div>
     </div>

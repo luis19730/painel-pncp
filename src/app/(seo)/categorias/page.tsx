@@ -1,30 +1,30 @@
 import Link from 'next/link'
 
 export const metadata = {
-  title: 'Licitacoes por Categoria',
-  description: 'Encontre licitacoes publicas por categoria no PNCP.',
+  title: 'Licitações por Categoria',
+  description: 'Encontre licitações públicas por categoria no PNCP.',
 }
 
 const categorias = [
-  { slug: 'informatica', label: 'Informatica', icon: '💻' },
+  { slug: 'informatica', label: 'Informática', icon: '💻' },
   { slug: 'medicamentos', label: 'Medicamentos', icon: '💊' },
-  { slug: 'veiculos', label: 'Veiculos', icon: '🚗' },
-  { slug: 'servicos-de-limpeza', label: 'Servicos de Limpeza', icon: '🧹' },
-  { slug: 'alimentacao', label: 'Alimentacao', icon: '🍎' },
-  { slug: 'construcao', label: 'Construcao', icon: '🏗️' },
-  { slug: 'educacao', label: 'Educacao', icon: '📚' },
-  { slug: 'seguranca', label: 'Seguranca', icon: '🔒' },
-  { slug: 'saude', label: 'Saude', icon: '🏥' },
+  { slug: 'veiculos', label: 'Veículos', icon: '🚗' },
+  { slug: 'servicos-de-limpeza', label: 'Serviços de Limpeza', icon: '🧹' },
+  { slug: 'alimentacao', label: 'Alimentação', icon: '🍎' },
+  { slug: 'construcao', label: 'Construção', icon: '🏗️' },
+  { slug: 'educacao', label: 'Educação', icon: '📚' },
+  { slug: 'seguranca', label: 'Segurança', icon: '🔒' },
+  { slug: 'saude', label: 'Saúde', icon: '🏥' },
   { slug: 'engenharia', label: 'Engenharia', icon: '⚙️' },
   { slug: 'consultoria', label: 'Consultoria', icon: '📋' },
-  { slug: 'telecomunicacoes', label: 'Telecomunicacoes', icon: '📡' },
+  { slug: 'telecomunicacoes', label: 'Telecomunicações', icon: '📡' },
 ]
 
 export default function CategoriasPage() {
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">Categorias de Licitacoes</h1>
-      <p className="text-gray-500 mb-8">Encontre licitacoes por segmento de atuacao</p>
+      <h1 className="text-3xl font-bold text-gray-900 mb-2">Categorias de Licitações</h1>
+      <p className="text-gray-500 mb-8">Encontre licitações por segmento de atuação</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {categorias.map(cat => (

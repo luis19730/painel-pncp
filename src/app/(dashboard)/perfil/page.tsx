@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Save, Plus, X, Building2, Briefcase, MapPin, DollarSign, Sparkles } from 'lucide-react';
+import { Save, Plus, X, Building2, Briefcase, MapPin, DollarSign } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import PageHeader from '@/components/ui/page-header';
 import Input from '@/components/ui/input';
@@ -109,7 +109,23 @@ export default function PerfilPage() {
   };
 
   const save = () => {
+    const stored = {
+      cnpj: profile.cnpj || null,
+      razaoSocial: profile.razaoSocial || null,
+      nomeFantasia: profile.nomeFantasia || null,
+      cnaes: profile.cnaes || [],
+      segmentos: profile.segmentos || [],
+      produtos: profile.produtos || [],
+      servicos: profile.servicos || [],
+      palavrasChave: profile.palavrasChave || [],
+      estados: profile.estados || [],
+      municipios: [],
+      valorMinimo: profile.valorMinimo ? Number(profile.valorMinimo) : null,
+      valorMaximo: profile.valorMaximo ? Number(profile.valorMaximo) : null,
+      modalidades: [],
+    };
     localStorage.setItem('companyProfile', JSON.stringify(profile));
+    localStorage.setItem('perfilEmpresa', JSON.stringify(stored));
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
@@ -119,12 +135,6 @@ export default function PerfilPage() {
       <PageHeader
         title="Perfil da Empresa"
         description="Configure os dados da empresa para personalizar o Radar"
-        badge={
-          <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-gradient-to-r from-secondary to-accent text-white border-transparent">
-            <Sparkles className="w-3 h-3" />
-            Premium
-          </span>
-        }
       >
         <Button onClick={save} variant="premium" icon={<Save className="w-4 h-4" />}>
           {saved ? 'Salvo!' : 'Salvar'}

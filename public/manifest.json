@@ -1,7 +1,7 @@
 {
   "name": "Painel PNCP",
   "short_name": "Painel PNCP",
-  "description": "Inteligencia para transformar licitacoes em oportunidades",
+  "description": "Inteligência para transformar licitações em oportunidades",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
