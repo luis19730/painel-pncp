@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 
 import { requirePaidAccess } from '@/lib/auth/require-access'
 
@@ -384,5 +384,3 @@ export async function OPTIONS() {
   })
 }
 
-  const guard = await requirePaidAccess()
-  if (!guard.ok) return guard.response

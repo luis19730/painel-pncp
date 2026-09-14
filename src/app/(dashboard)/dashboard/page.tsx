@@ -7,11 +7,13 @@ import OpportunityCard from '@/components/opportunities/opportunity-card';
 import StatCard from '@/components/ui/stat-card';
 import PageHeader from '@/components/ui/page-header';
 import DemoNotice from '@/components/ui/demo-notice';
+import DataSourceNotice, { type DataSource } from '@/components/ui/data-source-notice';
 import { Badge } from '@/components/ui/badge';
-import { StatsSkeleton } from '@/components/ui/skeleton';
+import { CardSkeleton, StatsSkeleton } from '@/components/ui/skeleton';
 import { formatCurrency, normalizar } from '@/lib/utils';
 import { calculateScore } from '@/lib/scoring';
 import { ITEMS } from '@/lib/market-data';
+import { searchLiveOpportunities } from '@/lib/pncp-data';
 import { computeDashboardMetrics, itemToOpportunity, filterQuery } from '@/lib/opportunity';
 import { createClient } from '@/lib/supabase/client';
 import { alertKey as alertStorageKey, favoriteKey as favoriteStorageKey } from '@/lib/storage-keys';
@@ -48,6 +50,14 @@ export default function DashboardPage() {
   const [numFavoritos, setNumFavoritos] = useState(0)
   const [numAlertas, setNumAlertas] = useState(0)
 
+  // Editais abertos — mesma fonte viva de /oportunidades e /busca (PNCP),
+  // com fallback para a base demonstrativa local quando a API está inacessível.
+  const [liveOpps, setLiveOpps] = useState<Opportunity[] | null>(null)
+  const [liveSource, setLiveSource] = useState<DataSource>('local')
+  const [liveLoading, setLiveLoading] = useState(true)
+  const [livePage, setLivePage] = useState(1)
+  const [liveReload, setLiveReload] = useState(0)
+
   useEffect(() => {
     let cancelled = false
     const supabase = createClient()
@@ -80,6 +90,31 @@ export default function DashboardPage() {
     () => opps.map((o) => ({ ...o, score: calculateScore(o, profile).total })).sort((a, b) => b.score - a.score),
     [opps, profile]
   )
+
+  // Editais abertos - mesma fonte viva de /oportunidades e /busca (PNCP),
+  // com fallback para a base demonstrativa local quando a API esta inacessivel.
+  useEffect(() => {
+    let cancelled = false
+    setLiveLoading(true)
+    searchLiveOpportunities({ query: '', page: livePage, profile: profile ?? undefined })
+      .then(({ opportunities, source }) => {
+        if (cancelled) return
+        setLiveOpps(opportunities.length > 0 ? opportunities : null)
+        setLiveSource(source)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setLiveOpps(null)
+        setLiveSource('local')
+      })
+      .finally(() => {
+        if (cancelled) return
+        setLiveLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [livePage, liveReload, profile])
 
   if (loading) {
     return (
@@ -187,7 +222,46 @@ export default function DashboardPage() {
         description="Indicadores derivados dos registros da base demonstrativa local"
       />
 
-      <DemoNotice>Indicadores analíticos calculados sobre a base de referência local. A API oficial do PNCP é utilizada nas páginas de Oportunidades e Busca.</DemoNotice>
+      <DemoNotice>Indicadores analíticos calculados sobre a base de referência local. A API oficial do PNCP é utilizada nas páginas de Oportunidades e Busca.      </DemoNotice>
+
+      <section className="card bg-white dark:bg-slate-900 dark:border-slate-800">
+        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Editais abertos</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              {liveLoading
+                ? 'Consultando editais no PNCP...'
+                : liveSource === 'pncp'
+                  ? `${liveOpps?.length ?? 0} editais ao vivo do PNCP (pagina ${livePage})`
+                  : 'base demonstrativa local (fallback quando a API fica inacessivel)'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setLiveReload((n) => n + 1)}
+            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-primary hover:text-primary-hover border border-slate-200 dark:border-slate-700 transition-colors"
+          >
+            <Radar className="w-4 h-4" /> Atualizar
+          </button>
+        </div>
+        <div className="p-6">
+          {liveLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <CardSkeleton />
+              <CardSkeleton />
+              <CardSkeleton />
+            </div>
+          ) : liveOpps && liveOpps.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {liveOpps.slice(0, 6).map((item) => (
+                <OpportunityCard key={item.id} item={item} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-400">Nenhum edital aberto no momento.</p>
+          )}
+        </div>
+      </section>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {cards.map((c) => (
