@@ -96,11 +96,12 @@ export default function DashboardPage() {
   useEffect(() => {
     let cancelled = false
     setLiveLoading(true)
-    searchLiveOpportunities({ query: '', page: livePage, profile: profile ?? undefined })
-      .then(({ opportunities, source }) => {
+    searchLiveOpportunities('', { page: livePage, profile: profile ?? undefined }, livePage)
+      .then((opportunities) => {
         if (cancelled) return
-        setLiveOpps(opportunities.length > 0 ? opportunities : null)
-        setLiveSource(source)
+        const temVivos = !!opportunities && opportunities.length > 0
+        setLiveOpps(temVivos ? opportunities : null)
+        setLiveSource(temVivos ? 'pncp' : 'local')
       })
       .catch(() => {
         if (cancelled) return
