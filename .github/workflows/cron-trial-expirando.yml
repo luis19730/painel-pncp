@@ -1,0 +1,31 @@
+name: Trial — aviso 7 dias antes
+
+# Dispara o endpoint /api/cron/trial-expirando, que envia o e-mail de aviso
+# "seu período de teste expira em 7 dias" para quem está em trial, sem
+# assinatura ativa e com exatamente 7 dias restantes. O endpoint é idempotente
+# (evento trial_email_7d em analytics_events), então rodar mais de uma vez por
+# dia é seguro.
+#
+# Secrets necessários (Settings > Secrets and variables > Actions):
+#   - PNCP_BASE_URL : https://www.painelpncp.com.br
+#   - CRON_SECRET   : mesmo valor do secret CRON_SECRET configurado no worker
+
+on:
+  schedule:
+    # 09:15 BRT (America/Sao_Paulo, UTC-3) = 12:15 UTC
+    - cron: '15 12 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  trial-expirando:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Disparar avisos de trial expirando em 7 dias
+        env:
+          PNCP_BASE_URL: ${{ secrets.PNCP_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -fsS --fail-with-body --max-time 120 \
+            -H "x-cron-secret: ${CRON_SECRET}" \
+            "${PNCP_BASE_URL}/api/cron/trial-expirando"

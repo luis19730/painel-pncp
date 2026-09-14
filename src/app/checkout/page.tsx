@@ -8,6 +8,7 @@ import Input from '@/components/ui/input'
 import { CheckCircle2, CreditCard, QrCode, Loader2 } from 'lucide-react'
 import { CICLOS, PLANOS, precoCiclo, precoMensalEquivalente, formatReais } from '@/lib/asaas/types'
 import type { CicloId } from '@/lib/asaas/types'
+import { track } from '@/lib/analytics'
 
 const TRIAL = 15
 
@@ -49,6 +50,16 @@ function CheckoutInner() {
   useEffect(() => {
     setPayMethod(metodo)
   }, [metodo])
+
+  // Evento de funil: início de contratação (CHECKOUT_STARTED).
+  useEffect(() => {
+    track({
+      event: 'checkout_started',
+      page: 'checkout',
+      props: { plano: plan.id, ciclo: cic.id, metodo },
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const assinar = async () => {
     if (loading) return

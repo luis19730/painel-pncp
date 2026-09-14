@@ -686,6 +686,12 @@ export default function AdminPage() {
             Admin · Painel PNCP
           </h1>
           <div className="flex items-center gap-3">
+            <a
+              href="/admin/conversao"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+            >
+              📊 Conversão
+            </a>
             <Badge variant="success">Painel ao vivo</Badge>
             <button
               onClick={handleLogout}

@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Check, Sparkles, Building2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import PlanCtaLink from '@/components/marketing/plan-cta-link'
+import { track } from '@/lib/analytics'
 import { CICLOS, PLANOS, precoCiclo, precoMensalEquivalente, formatReais } from '@/lib/asaas/types'
 import type { CicloId } from '@/lib/asaas/types'
 
@@ -34,6 +35,11 @@ const FEATURES: Record<string, string[]> = {
 
 export default function PlanosPage() {
   const [ciclo, setCiclo] = useState<CicloId>('mensal')
+
+  // Evento de funil: visualização da página de planos (PLAN_VIEW).
+  useEffect(() => {
+    track({ event: 'plan_view', page: 'planos' })
+  }, [])
 
   return (
     <div className="py-16 md:py-24">

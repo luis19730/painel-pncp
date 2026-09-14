@@ -6,6 +6,7 @@ import { computePlanoInfo } from '@/lib/planos/plano'
 import { sendEmail } from '@/lib/alerts/notifications/email'
 import { siteBaseUrl } from '@/lib/auth/site-url'
 import { trialExpiradoEmailHtml, trialExpiradoEmailText } from '@/lib/planos/trial-email'
+import { registrarEvento } from '@/lib/analytics-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -89,6 +90,7 @@ export async function GET(req: Request) {
 
     if (result.ok) {
       await marcarTrialEmailEnviado(client, r.user_id).catch(() => {})
+      await registrarEvento(client, { event: 'trial_expired', user_id: r.user_id, page: 'trial' })
       enviados++
     } else {
       falhas++

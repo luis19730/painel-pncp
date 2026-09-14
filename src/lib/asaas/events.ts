@@ -17,6 +17,7 @@ import { proximaCobrancaIso } from '@/lib/planos/plano'
 import { cicloById } from '@/lib/asaas/types'
 import { linkPorValor } from '@/lib/asaas/links'
 import { getAsaasCustomer } from '@/lib/asaas/client'
+import { registrarEvento } from '@/lib/analytics-server'
 
 type AnyClient = SupabaseClient<any, 'public', any>
 
@@ -171,6 +172,12 @@ export async function processAsaasEvent(
           updated_at: new Date().toISOString(),
         }).eq('user_id', userId)
 
+        await registrarEvento(client, {
+          event: 'payment_confirmed',
+          user_id: userId,
+          page: 'checkout',
+          props: { valor: payment?.value ?? null, origem: 'link' },
+        })
         return { handled: true, detail: 'link_pago' }
       }
       return { handled: true, detail: 'link_pago_sem_mapeamento_de_plano' }
@@ -202,6 +209,12 @@ export async function processAsaasEvent(
       // Período de uso (fim do acesso) conta a partir da data do pagamento:
       // pagou R$ 39,90 (mensal) → +1 mês de uso, e assim por diante.
       trialFim: proxima,
+    })
+    await registrarEvento(client, {
+      event: 'payment_confirmed',
+      user_id: userId,
+      page: 'checkout',
+      props: { valor: payment?.value ?? null, billingType: payment?.billingType ?? null },
     })
     return { handled: true, detail: 'pago' }
   }

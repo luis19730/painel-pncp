@@ -9,6 +9,11 @@ const ALLOWED_EVENTS = new Set([
   'signup',
   'login',
   'conversion',
+  'plan_view',
+  'checkout_started',
+  'trial_started',
+  'trial_expired',
+  'payment_confirmed',
 ])
 
 /**

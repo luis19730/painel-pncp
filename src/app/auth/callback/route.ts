@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/alerts/db'
 import { getPlano, upsertPlanoTrial } from '@/lib/planos/db'
 import { buildTrialRecord } from '@/lib/planos/plano'
+import { registrarEvento } from '@/lib/analytics-server'
 
 const HOME = '/dashboard'
 
@@ -42,6 +43,7 @@ export async function GET(request: NextRequest) {
       const rec = await getPlano(svc, userId)
       if (!rec) {
         await upsertPlanoTrial(svc, userId, buildTrialRecord(userId))
+        await registrarEvento(svc, { event: 'trial_started', user_id: userId, page: 'cadastro' })
       }
     } catch {
       console.error('[oauth] falha ao criar trial para', userId)

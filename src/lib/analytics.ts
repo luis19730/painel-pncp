@@ -15,8 +15,21 @@
 const CLIENT_ID_KEY = 'pncp_analytics_client_id'
 const SESSION_KEY = 'pncp_analytics_session'
 
+export type AnalyticsEventName =
+  | 'pageview'
+  | 'search'
+  | 'view_opportunity'
+  | 'signup'
+  | 'login'
+  | 'conversion'
+  | 'plan_view'
+  | 'checkout_started'
+  | 'trial_started'
+  | 'trial_expired'
+  | 'payment_confirmed'
+
 export interface AnalyticsEvent {
-  event: 'pageview' | 'search' | 'view_opportunity' | 'signup' | 'login' | 'conversion'
+  event: AnalyticsEventName
   page?: string
   path?: string
   props?: Record<string, unknown>

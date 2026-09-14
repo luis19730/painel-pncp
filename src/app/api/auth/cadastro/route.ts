@@ -7,6 +7,7 @@ import { confirmationEmailHtml, confirmationEmailText } from '@/lib/auth/confirm
 import { createServiceClient } from '@/lib/alerts/db'
 import { buildTrialRecord } from '@/lib/planos/plano'
 import { upsertPlanoTrial } from '@/lib/planos/db'
+import { registrarEvento } from '@/lib/analytics-server'
 import { validarEmailCadastro } from '@/lib/auth/email-validation'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -105,6 +106,7 @@ export async function POST(req: Request) {
   try {
     const svc = createServiceClient()
     await upsertPlanoTrial(svc, userId, buildTrialRecord(userId))
+    await registrarEvento(svc, { event: 'trial_started', user_id: userId, page: 'cadastro' })
   } catch {
     // Ignorado de propósito: cadastro não pode falhar por causa do plano.
     console.error('[cadastro] falha ao gravar plano/trial para', userId)
