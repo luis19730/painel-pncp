@@ -98,7 +98,7 @@ export default function HomeContent() {
               </div>
 
               <div className="mt-8 flex flex-wrap items-center justify-center lg:justify-start gap-x-6 gap-y-3 text-sm text-slate-500 dark:text-slate-400">
-                {['Busca inteligente', 'Score de oportunidade', 'Alertas automáticos', 'Mapa de preços', 'Auxílio na Montagem de Processo'].map(item => (
+                {['Busca inteligente', 'Score de oportunidade', 'Alertas automáticos', 'Mapa de preços', 'Auxílio na Montagem de Processo', 'Compras Expressas (SICX)'].map(item => (
                   <span key={item} className="flex items-center gap-1.5">
                     <Check className="w-4 h-4 text-success" />
                     {item}

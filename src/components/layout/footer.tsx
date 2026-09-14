@@ -26,6 +26,7 @@ export default function Footer() {
             <h4 className="font-semibold text-white text-sm mb-3">Recursos</h4>
             <div className="space-y-2">
               <FooterLink href="/precos">Mapa de Preços</FooterLink>
+              <FooterLink href="/sicx">Compras Expressas (SICX)</FooterLink>
               <FooterLink href="/concorrentes">Concorrentes</FooterLink>
               <FooterLink href="/analise-edital">Análise de Edital</FooterLink>
               <FooterLink href="/ia-licitacoes">IA de Licitações</FooterLink>

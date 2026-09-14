@@ -43,6 +43,7 @@ export default function CadastroPage() {
             'Organização das referências encontradas',
             'Comparação de preços',
             'Geração de relatório',
+            'Consulta ao SICX (Compras Expressas)',
             'Ferramentas para apoio à contratação pública',
             'Acesso a outras funcionalidades do Painel PNCP',
           ].map((item) => (
