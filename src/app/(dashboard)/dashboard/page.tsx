@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { TrendingUp, FileText, Clock, AlertTriangle, Heart, DollarSign, Search, Radar, ArrowRight, Building2, AlertCircle } from 'lucide-react';
 import OpportunityCard from '@/components/opportunities/opportunity-card';
 import StatCard from '@/components/ui/stat-card';
@@ -14,7 +15,7 @@ import { formatCurrency, normalizar } from '@/lib/utils';
 import { calculateScore } from '@/lib/scoring';
 import { ITEMS } from '@/lib/market-data';
 import { searchLiveOpportunities } from '@/lib/pncp-data';
-import { computeDashboardMetrics, itemToOpportunity, filterQuery } from '@/lib/opportunity';
+import { computeDashboardMetrics, computeOpportunityMetrics, itemToOpportunity, filterQuery } from '@/lib/opportunity';
 import { createClient } from '@/lib/supabase/client';
 import { alertKey as alertStorageKey, favoriteKey as favoriteStorageKey } from '@/lib/storage-keys';
 import type { CompanyProfile, Opportunity } from '@/types';
@@ -57,6 +58,8 @@ export default function DashboardPage() {
   const [liveLoading, setLiveLoading] = useState(true)
   const [livePage, setLivePage] = useState(1)
   const [liveReload, setLiveReload] = useState(0)
+  const [busca, setBusca] = useState('')
+  const router = useRouter()
 
   useEffect(() => {
     let cancelled = false
@@ -82,13 +85,23 @@ export default function DashboardPage() {
     }
   }, [])
 
-  // Fonte ÚNICA de dados: ITEMS convertidos pela camada central.
+  // Fonte local (fallback) — usada somente quando a API do PNCP não responde.
   const opps = useMemo<Opportunity[]>(() => ITEMS.map(itemToOpportunity), [])
-  const metrics = useMemo(() => computeDashboardMetrics(ITEMS), [])
+  const localMetrics = useMemo(() => computeDashboardMetrics(ITEMS), [])
+
+  // Quando há dados ao vivo do PNCP, TODOS os indicadores e listas do dashboard
+  // passam a refletir esses registros reais (a base local vira fallback).
+  const liveMetrics = useMemo(
+    () => (liveOpps && liveOpps.length > 0 ? computeOpportunityMetrics(liveOpps) : null),
+    [liveOpps]
+  )
+  const metrics = liveMetrics ?? localMetrics
+  const baseOpps = liveOpps && liveOpps.length > 0 ? liveOpps : opps
+  const usandoLive = liveSource === 'live' && !!liveMetrics
 
   const scored = useMemo(
-    () => opps.map((o) => ({ ...o, score: calculateScore(o, profile).total })).sort((a, b) => b.score - a.score),
-    [opps, profile]
+    () => baseOpps.map((o) => ({ ...o, score: calculateScore(o, profile).total })).sort((a, b) => b.score - a.score),
+    [baseOpps, profile]
   )
 
   // Editais abertos - mesma fonte viva de /oportunidades e /busca (PNCP),
@@ -96,12 +109,12 @@ export default function DashboardPage() {
   useEffect(() => {
     let cancelled = false
     setLiveLoading(true)
-    searchLiveOpportunities('', { page: livePage, profile: profile ?? undefined }, livePage)
+    searchLiveOpportunities('licitacao', { page: livePage }, livePage)
       .then((opportunities) => {
         if (cancelled) return
         const temVivos = !!opportunities && opportunities.length > 0
         setLiveOpps(temVivos ? opportunities : null)
-        setLiveSource(temVivos ? 'pncp' : 'local')
+        setLiveSource(temVivos ? 'live' : 'local')
       })
       .catch(() => {
         if (cancelled) return
@@ -148,7 +161,7 @@ export default function DashboardPage() {
       value: metrics.total,
       icon: <FileText className="w-5 h-5" />,
       accent: 'primary' as const,
-      hint: 'registros disponíveis',
+      hint: usandoLive ? 'oportunidades reais do PNCP (amostra)' : 'registros disponíveis',
       href: '/oportunidades',
     },
     {
@@ -220,10 +233,47 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <PageHeader
         title="Dashboard"
-        description="Indicadores derivados dos registros da base demonstrativa local"
+        description={
+          usandoLive
+            ? 'Indicadores calculados a partir de oportunidades reais do PNCP'
+            : 'Indicadores derivados da base demonstrativa local (fallback)'
+        }
       />
 
-      <DemoNotice>Indicadores analíticos calculados sobre a base de referência local. A API oficial do PNCP é utilizada nas páginas de Oportunidades e Busca.      </DemoNotice>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          const q = busca.trim()
+          router.push(q ? `/oportunidades?q=${encodeURIComponent(q)}` : '/oportunidades')
+        }}
+        className="flex gap-3"
+      >
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar oportunidades por palavra-chave (objeto, órgão, município)..."
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+          />
+        </div>
+        <button
+          type="submit"
+          className="px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary-hover transition-colors"
+        >
+          Buscar
+        </button>
+      </form>
+
+      {usandoLive ? (
+        <DataSourceNotice source="live" />
+      ) : (
+        <DemoNotice>
+          Indicadores analíticos calculados sobre a base de referência local (fallback). Os
+          indicadores e editais ao vivo do PNCP são exibidos automaticamente quando a API responde.
+        </DemoNotice>
+      )}
 
       <section className="card bg-white dark:bg-slate-900 dark:border-slate-800">
         <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 flex-wrap">
@@ -232,7 +282,7 @@ export default function DashboardPage() {
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
               {liveLoading
                 ? 'Consultando editais no PNCP...'
-                : liveSource === 'pncp'
+                : liveSource === 'live'
                   ? `${liveOpps?.length ?? 0} editais ao vivo do PNCP (pagina ${livePage})`
                   : 'base demonstrativa local (fallback quando a API fica inacessivel)'}
             </p>
@@ -300,7 +350,9 @@ export default function DashboardPage() {
       <div className="card">
         <div className="p-6 border-b border-slate-100 dark:border-slate-800">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Distribuição por UF</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Registros por estado na base demonstrativa</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            {usandoLive ? 'Oportunidades ao vivo por estado (PNCP)' : 'Registros por estado na base demonstrativa'}
+          </p>
         </div>
         <div className="p-6">
           {metrics.ufs.length > 0 ? (
@@ -372,7 +424,11 @@ export default function DashboardPage() {
             <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
               🔥 Oportunidades com maior compatibilidade
             </h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Pontuação derivada do seu perfil sobre os registros da base</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {usandoLive
+                ? 'Pontuação do seu perfil sobre as oportunidades ao vivo do PNCP'
+                : 'Pontuação derivada do seu perfil sobre os registros da base'}
+            </p>
           </div>
           <Link href="/oportunidades" className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary-hover">
             Ver todas <ArrowRight className="w-4 h-4" />
@@ -400,7 +456,9 @@ export default function DashboardPage() {
       <div className="card">
         <div className="p-6 border-b border-slate-100 dark:border-slate-800">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Registros da base por valor</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Maiores valores entre os registros demonstrativos</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            {usandoLive ? 'Maiores valores entre as oportunidades ao vivo do PNCP' : 'Maiores valores entre os registros demonstrativos'}
+          </p>
         </div>
         <div className="divide-y divide-slate-100 dark:divide-slate-800">
           {scored.slice(0, 8).map((item) => (

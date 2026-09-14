@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Gauge, Target, Shield, ExternalLink, Info, ClipboardList } from 'lucide-react';
+import { Gauge, Target, Shield, ExternalLink, Info, ClipboardList, Search } from 'lucide-react';
 import PageHeader from '@/components/ui/page-header';
 import StatCard from '@/components/ui/stat-card';
-import { cn, formatCurrency, formatDate, getScoreLabel } from '@/lib/utils';
+import { cn, formatCurrency, formatDate, getScoreLabel, normalizar } from '@/lib/utils';
 import { searchLiveOpportunities } from '@/lib/pncp-data';
 import { calculateScore } from '@/lib/scoring';
 import type { Opportunity, CompanyProfile } from '@/types';
@@ -47,6 +47,7 @@ export default function ScorePage() {
   const [profile] = useState<CompanyProfile | null>(() => loadProfile());
   const [selected, setSelected] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [busca, setBusca] = useState('');
 
   useEffect(() => {
     let mounted = true;
@@ -67,6 +68,13 @@ export default function ScorePage() {
       .map((o) => ({ opp: o, s: calculateScore(o, profile) }))
       .sort((a, b) => b.s.total - a.s.total);
   }, [opps, profile]);
+
+  const termo = normalizar(busca.trim());
+  const filtrados = termo
+    ? scored.filter(({ opp }) =>
+        normalizar(`${opp.objeto} ${opp.orgao} ${opp.uf} ${opp.municipio} ${opp.modalidade}`).includes(termo)
+      )
+    : scored;
 
   const current = selected ? scored.find((x) => x.opp.id === selected) : undefined;
   const media = scored.length ? Math.round(scored.reduce((a, x) => a + x.s.total, 0) / scored.length) : 0;
@@ -98,6 +106,19 @@ export default function ScorePage() {
         </div>
       ) : (
         <>
+          <form onSubmit={(e) => e.preventDefault()} className="flex gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder="Buscar nas oportunidades avaliadas (objeto, órgão, UF)..."
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+            </div>
+          </form>
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <StatCard label="Oportunidades avaliadas" value={String(scored.length)} icon={<Gauge className="w-5 h-5" />} accent="primary" hint="retornadas do PNCP" />
             <StatCard label="Score médio" value={`${media}`} icon={<Target className="w-5 h-5" />} accent="secondary" hint="aderência geral" />
@@ -106,7 +127,10 @@ export default function ScorePage() {
 
           <div className="grid lg:grid-cols-5 gap-6">
             <div className="lg:col-span-2 space-y-2">
-              {scored.map(({ opp, s }) => {
+              {filtrados.length === 0 && (
+                <p className="text-sm text-slate-400 px-1 py-6 text-center">Nenhum resultado para sua busca.</p>
+              )}
+              {filtrados.map(({ opp, s }) => {
                 const label = getScoreLabel(s.total);
                 return (
                   <button

@@ -64,8 +64,14 @@ function top(values: string[], n = 5): Array<[string, number]> {
 /** Calcula todos os indicadores do Dashboard a partir de UMA fonte (ITEMS),
  * aplicando a classificação de status central. */
 export function computeDashboardMetrics(items: ItemRecord[]): DashboardMetrics {
-  const opps = items.map(itemToOpportunity)
+  return computeOpportunityMetrics(items.map(itemToOpportunity))
+}
 
+/** Calcula os MESMOS indicadores do Dashboard a partir de oportunidades já
+ * normalizadas (ex.: dados ao vivo do PNCP). O status é classificado pela data
+ * limite de encerramento — e não pelo texto bruto vindo da origem, que varia
+ * entre a base local e a API do PNCP. */
+export function computeOpportunityMetrics(opps: Opportunity[]): DashboardMetrics {
   let abertas = 0
   let encerradas = 0
   let semData = 0
@@ -73,12 +79,13 @@ export function computeDashboardMetrics(items: ItemRecord[]): DashboardMetrics {
   let valorAbertas = 0
 
   for (const o of opps) {
-    const v = typeof o.valor === 'number' && Number.isFinite(o.valor) ? o.valor : 0
-    valorTotal += v > 0 ? v : 0
-    if (o.situacao === 'Aberta') {
+    const v = typeof o.valor === 'number' && Number.isFinite(o.valor) ? (o.valor > 0 ? o.valor : 0) : 0
+    valorTotal += v
+    const st = getOpportunityStatus(o.dataEncerramento || o.dataAbertura)
+    if (st === 'aberta') {
       abertas += 1
-      valorAbertas += v > 0 ? v : 0
-    } else if (o.situacao === 'Encerrada') {
+      valorAbertas += v
+    } else if (st === 'encerrada') {
       encerradas += 1
     } else {
       semData += 1
@@ -90,7 +97,7 @@ export function computeDashboardMetrics(items: ItemRecord[]): DashboardMetrics {
   const orgaos = top(opps.map((o) => o.orgao)).slice(0, 5)
 
   return {
-    total: items.length,
+    total: opps.length,
     abertas,
     encerradas,
     semData,

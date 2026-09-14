@@ -9,7 +9,7 @@ import {
   Sparkles, Layers, ShieldAlert,
   ListChecks, FileCheck, FolderOpen,
   Star, FileBarChart, Calendar,
-  Building2, Settings, HelpCircle, Type
+  Building2, Settings, HelpCircle, Type, Zap
 } from 'lucide-react'
 const navGroups = [
   {
@@ -18,6 +18,7 @@ const navGroups = [
     items: [
       { href: '/dashboard', label: 'Oportunidades', icon: Search },
       { href: '/busca', label: 'Buscar', icon: Search },
+      { href: '/credenciamento-sicx', label: 'SICX', icon: Zap },
       { href: '/meu-radar', label: 'Meu Radar', icon: Radar },
       { href: '/alertas', label: 'Alertas', icon: Bell },
     ],
