@@ -5,7 +5,7 @@ import { listPlanos } from '@/lib/planos/db'
 import { computePlanoInfo } from '@/lib/planos/plano'
 import { sendEmail } from '@/lib/alerts/notifications/email'
 import { siteBaseUrl } from '@/lib/auth/site-url'
-import { trialExpirando7dEmailHtml, trialExpirando7dEmailText } from '@/lib/planos/trial-email'
+import { trialLembreteAssunto, trialLembreteEmailHtml, trialLembreteEmailText } from '@/lib/planos/trial-email'
 import { registrarEvento } from '@/lib/analytics-server'
 import { resolverIgnorados } from '@/lib/admin/publico'
 
@@ -14,17 +14,33 @@ export const dynamic = 'force-dynamic'
 const DIA_MS = 24 * 60 * 60 * 1000
 
 /**
+ * Marcos da sequência de lembretes de trial (em dias):
+ *   > 0  → faltam N dias
+ *   <= 0 → expirou há |N| dias
+ * O cron roda 1x/dia; cada marco é enviado no dia em que `dias` coincide,
+ * uma única vez por usuário, e para de enviar quando a assinatura é
+ * confirmada (plano pago ou status_pagamento 'active').
+ */
+export const MARCOS_TRIAL = [7, 6, 4, 3, 2, 1, -2, -3, -6]
+
+/** Dias restantes (positivo) ou dias desde a expiração (negativo). */
+function diasAte(fimIso: string, agora: Date): number {
+  const diff = new Date(fimIso).getTime() - agora.getTime()
+  return diff >= 0 ? Math.ceil(diff / DIA_MS) : -Math.ceil(-diff / DIA_MS)
+}
+
+/**
  * GET /api/cron/trial-expirando
  *
- * Cron DIÁRIO: envia o aviso "seu trial expira em 7 dias" para quem está em
- * trial, sem assinatura ativa e com exatamente 7 dias restantes.
+ * Cron DIÁRIO da sequência de lembretes de trial: envia e-mail nos marcos
+ * 7, 6, 4, 3, 2, 1 (antes de expirar) e -2, -3, -6 (depois), para quem está em
+ * trial e NÃO tem assinatura ativa. Para ao confirmar a assinatura.
  *
- * Mesmo padrão do /api/cron/trial-expirado (Vinext/Cloudflare não tem handler
- * `scheduled`): endpoint HTTP protegido por CRON_SECRET, chamado por cron
- * externo (GitHub Action diária).
+ * Mesmo padrão dos demais crons (Vinext/Cloudflare sem `scheduled`): endpoint
+ * HTTP protegido por CRON_SECRET, chamado por cron externo (GitHub Action).
  *
- * Idempotência: grava um evento `trial_email_7d` em analytics_events por
- * usuário; se já existir, não reenvia (sem coluna/migration nova).
+ * Idempotência: grava um evento `trial_reminder` em analytics_events com o
+ * marco em `props.mark`; se já existir (user+mark), não reenvia.
  */
 export async function GET(req: Request) {
   const expected = process.env.CRON_SECRET
@@ -59,36 +75,45 @@ export async function GET(req: Request) {
     if (!u.id) continue
     if (u.email) {
       emailPorUser.set(u.id, u.email)
-      // Nome amigável: parte local do e-mail (o tipo retornado não expõe user_metadata).
       nomePorUser.set(u.id, u.email.split('@')[0])
     }
   }
 
   const agora = new Date()
-  const alvos = planos.filter((r) => {
-    if (!r.user_id || ignorados.userIds.has(r.user_id)) return false
-    const info = computePlanoInfo(r, agora)
-    if (info.origem !== 'trial') return false
-    if (info.bloqueado) return false
-    if (info.plano === 'pro' || info.plano === 'business') return false
-    if (info.statusPagamento === 'active' || info.statusPagamento === 'trial') return false
-    return info.diasRestantes === 7
-  })
 
-  if (alvos.length === 0) {
-    return NextResponse.json({ ok: true, alvos: 0, enviados: 0, pulados: 0, falhas: 0 })
+  // Candidatos: em trial (ou expirados), não bloqueados, sem assinatura ativa,
+  // e cuja data de fim cai exatamente em um dos marcos.
+  const candidatos = planos
+    .map((r) => {
+      if (!r.user_id || ignorados.userIds.has(r.user_id)) return null
+      const info = computePlanoInfo(r, agora)
+      if (info.bloqueado) return null
+      // Assinatura ativa/confirmada → para de enviar lembretes.
+      if (info.plano === 'pro' || info.plano === 'business') return null
+      if (info.statusPagamento === 'active') return null
+      const fim = info.trialFimCalculado
+      if (!fim) return null
+      const dias = diasAte(fim, agora)
+      if (!MARCOS_TRIAL.includes(dias)) return null
+      return { user_id: r.user_id, dias }
+    })
+    .filter((c): c is { user_id: string; dias: number } => c !== null)
+
+  if (candidatos.length === 0) {
+    return NextResponse.json({ ok: true, marcos: MARCOS_TRIAL, candidatos: 0, enviados: 0, pulados: 0, falhas: 0 })
   }
 
-  // Idempotência: descobre quem já recebeu o aviso (evento trial_email_7d).
-  const ids = alvos.map((a) => a.user_id)
+  // Idempotência: quem já recebeu cada marco (evento trial_reminder + props.mark).
+  const ids = Array.from(new Set(candidatos.map((c) => c.user_id)))
   const jaEnviados = new Set<string>()
   const { data: marcas } = await client
     .from('analytics_events')
-    .select('user_id')
-    .eq('event', 'trial_email_7d')
+    .select('user_id, props')
+    .eq('event', 'trial_reminder')
     .in('user_id', ids)
   for (const m of marcas || []) {
-    if (m.user_id) jaEnviados.add(m.user_id)
+    const mark = (m.props as Record<string, unknown> | null)?.mark
+    if (m.user_id && mark != null) jaEnviados.add(`${m.user_id}|${mark}`)
   }
 
   const base = siteBaseUrl(req)
@@ -97,33 +122,47 @@ export async function GET(req: Request) {
   let enviados = 0
   let pulados = 0
   let falhas = 0
+  const enviadosPorMarco: Record<string, number> = {}
 
-  for (const r of alvos) {
-    const userId = r.user_id
-    if (jaEnviados.has(userId)) {
+  for (const c of candidatos) {
+    if (jaEnviados.has(`${c.user_id}|${c.dias}`)) {
       pulados++
       continue
     }
-    const email = emailPorUser.get(userId)
+    const email = emailPorUser.get(c.user_id)
     if (!email) {
       pulados++
       continue
     }
-    const nome = nomePorUser.get(userId) || ''
+    const nome = nomePorUser.get(c.user_id) || ''
     const result = await sendEmail({
       to: email,
-      subject: '⏰ Seu período de teste no Painel PNCP expira em 7 dias — Não perca o acesso às suas licitações!',
-      html: trialExpirando7dEmailHtml(nome, assinaturaLink),
-      text: trialExpirando7dEmailText(nome, assinaturaLink),
+      subject: trialLembreteAssunto(c.dias),
+      html: trialLembreteEmailHtml(c.dias, nome, assinaturaLink),
+      text: trialLembreteEmailText(c.dias, nome, assinaturaLink),
     })
     if (result.ok) {
-      await registrarEvento(client, { event: 'trial_email_7d', user_id: userId, page: 'trial' })
+      await registrarEvento(client, {
+        event: 'trial_reminder',
+        user_id: c.user_id,
+        page: 'trial',
+        props: { mark: c.dias },
+      })
       enviados++
+      enviadosPorMarco[String(c.dias)] = (enviadosPorMarco[String(c.dias)] || 0) + 1
     } else {
       falhas++
-      console.error('[trial-expirando] falha ao enviar e-mail para', email, result.erro)
+      console.error('[trial-expirando] falha ao enviar marco', c.dias, 'para', email, result.erro)
     }
   }
 
-  return NextResponse.json({ ok: true, alvos: alvos.length, enviados, pulados, falhas })
+  return NextResponse.json({
+    ok: true,
+    marcos: MARCOS_TRIAL,
+    candidatos: candidatos.length,
+    enviados,
+    pulados,
+    falhas,
+    enviados_por_marco: enviadosPorMarco,
+  })
 }
