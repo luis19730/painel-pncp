@@ -80,19 +80,33 @@ export async function GET(req: Request) {
   })
 
   // 5. API PNCP
+  // A RAIZ de /api responde 404 (não há endpoint na raiz). O check pinga um
+  // endpoint REAL (busca) e replica a MESMA estratégia do app: tenta o PNCP
+  // direto e, se o WAF bloquear (ex.: HTTP 520 vindo de datacenter), tenta o
+  // proxy oficial do projeto. Só considera OK quando alguma fonte responde 2xx.
+  const PNCP_PROXY = process.env.NEXT_PUBLIC_PNCP_PROXY || 'https://pncp-proxy.luis19730.workers.dev'
   let pncpOk = false
   let pncpDetalhe = 'Api indisponível'
-  try {
-    const resp = await fetch(PNCP_BASE, {
-      method: 'GET',
-      signal: AbortSignal.timeout(8000),
-      headers: { Accept: 'application/json' },
-    })
-    pncpOk = true
-    pncpDetalhe = `HTTP ${resp.status}`
-  } catch (e) {
-    pncpOk = false
-    pncpDetalhe = (e as Error)?.message || 'timeout'
+  const fontesPing: Array<{ nome: string; url: string }> = [
+    { nome: 'direto', url: `${PNCP_BASE}/search/?q=licitacao&tipos_documento=edital&pagina=1` },
+    { nome: 'proxy', url: `${PNCP_PROXY.replace(/\/$/, '')}/search/?q=licitacao&tipos_documento=edital&pagina=1` },
+  ]
+  for (const fonte of fontesPing) {
+    try {
+      const resp = await fetch(fonte.url, {
+        method: 'GET',
+        signal: AbortSignal.timeout(8000),
+        headers: { Accept: 'application/json', Referer: 'https://pncp.gov.br/' },
+      })
+      if (resp.ok) {
+        pncpOk = true
+        pncpDetalhe = `HTTP ${resp.status} (${fonte.nome})`
+        break
+      }
+      pncpDetalhe = `HTTP ${resp.status}`
+    } catch (e) {
+      pncpDetalhe = (e as Error)?.message || 'timeout'
+    }
   }
   checagens.push({ item: 'API PNCP', ok: pncpOk, detalhe: pncpOk ? pncpDetalhe : `Inacessível (${pncpDetalhe})` })
 
