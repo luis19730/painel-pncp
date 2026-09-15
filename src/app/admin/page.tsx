@@ -692,6 +692,12 @@ export default function AdminPage() {
             >
               📊 Conversão
             </a>
+            <a
+              href="/admin/contatos"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+            >
+              📇 Contatos
+            </a>
             <Badge variant="success">Painel ao vivo</Badge>
             <button
               onClick={handleLogout}
