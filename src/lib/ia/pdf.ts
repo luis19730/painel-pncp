@@ -10,8 +10,8 @@
 import { getDocumentProxy, extractText } from 'unpdf'
 import { getWorkerAI } from './ai-global'
 
-export const MAX_PDF_BYTES = 8 * 1024 * 1024 // 8 MB
-export const MAX_PDF_PAGES = 60
+export const MAX_PDF_BYTES = 3 * 1024 * 1024 // 3 MB — parse via pdf.js é caro em CPU
+export const MAX_PDF_PAGES = 40
 export const MAX_EXTRACTED_CHARS = 40_000 // ~ entrada do modelo
 
 // Abaixo desse número de caracteres o texto do `unpdf` é considerado insuficiente

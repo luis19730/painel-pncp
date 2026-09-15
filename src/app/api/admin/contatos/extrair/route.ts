@@ -24,9 +24,16 @@ export async function POST(req: Request) {
   }
 
   const url = new URL(req.url)
-  const pedido = Number(url.searchParams.get('limite') || 3) || 3
+  const pedido = Number(url.searchParams.get('limite') || 2) || 2
   const limite = Math.min(10, Math.max(1, pedido))
 
-  const resultado = await executarLoteExtracao(client, limite)
-  return NextResponse.json({ ok: true, ...resultado })
+  try {
+    const resultado = await executarLoteExtracao(client, limite)
+    return NextResponse.json({ ok: true, ...resultado })
+  } catch (e) {
+    return NextResponse.json(
+      { ok: false, erro: (e as Error)?.message || 'Falha na extração.' },
+      { status: 500 }
+    )
+  }
 }
