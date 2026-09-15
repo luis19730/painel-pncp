@@ -173,16 +173,16 @@ export default function AdminContatosPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-admin-password': pwd },
       })
-      const data = await res.json()
-      if (!res.ok || !data.ok) {
-        setErro(data.erro || 'Falha na extração.')
-        return
-      }
-      const r = data.resumo || {}
+      const text = await res.text()
+      let data: Record<string, unknown> = {}
+      try { data = JSON.parse(text) } catch { /* body não-JSON */ }
+      if (!res.ok) throw new Error(String(data.erro) || `Erro HTTP ${res.status}`)
+      if (!data.ok) throw new Error(String(data.erro) || 'Falha na extração.')
+      const r = (data.resumo || {}) as Record<string, number>
       setMsg(`Lote: ${data.processados} processado(s) · ${data.emails_extraidos} e-mail(s) · ok=${r.ok || 0} sem_contato=${r.sem_contato || 0} sem_arquivo=${r.sem_arquivo || 0} pdf_invalido=${r.pdf_invalido || 0} falha=${r.falha || 0}`)
       await carregar()
-    } catch {
-      setErro('Falha de conexão.')
+    } catch (e) {
+      setErro((e as Error).message || 'Falha na extração.')
     } finally {
       setExtraindo(false)
     }
