@@ -53,6 +53,9 @@ export default function AdminContatosPage() {
   const [contatos, setContatos] = useState<Contato[]>([])
   const [carregando, setCarregando] = useState(false)
   const [extraindo, setExtraindo] = useState(false)
+  const [enviando, setEnviando] = useState(false)
+  const [emailTeste, setEmailTeste] = useState('')
+  const [msgEnvio, setMsgEnvio] = useState('')
   const [msg, setMsg] = useState('')
   const [erro, setErro] = useState('')
 
@@ -183,6 +186,57 @@ export default function AdminContatosPage() {
     }
   }
 
+  const resumoEnvio = (j: { selecionados?: number; enviados?: number; pulados?: number; falhas?: number; dryRun?: boolean }) =>
+    `selecionados=${j.selecionados || 0} enviados=${j.enviados || 0} pulados=${j.pulados || 0} falhas=${j.falhas || 0}${j.dryRun ? ' (dry-run)' : ''}`
+
+  const enviarTeste = async () => {
+    if (!emailTeste.trim()) {
+      setMsgEnvio('Informe um e-mail de teste.')
+      return
+    }
+    setEnviando(true)
+    setMsgEnvio('')
+    try {
+      const res = await fetch(`/api/admin/contatos/enviar?para=${encodeURIComponent(emailTeste.trim())}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-password': pwd },
+      })
+      const j = await res.json()
+      if (!res.ok || !j.ok) {
+        setMsgEnvio(j.erro || 'Falha no envio.')
+        return
+      }
+      setMsgEnvio(`Teste ${j.enviados ? 'enviado' : 'falhou'} para ${emailTeste.trim()}`)
+    } catch {
+      setMsgEnvio('Falha de conexão.')
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  const enviarOutreach = async (dry: boolean) => {
+    if (!dry && !confirm('Enviar o e-mail de apresentação para até 20 contatos REAIS? Esta ação não pode ser desfeita.')) return
+    setEnviando(true)
+    setMsgEnvio('')
+    try {
+      const res = await fetch(`/api/admin/contatos/enviar?limite=20${dry ? '&dry=1' : ''}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-password': pwd },
+      })
+      const j = await res.json()
+      if (!res.ok || !j.ok) {
+        setMsgEnvio(j.erro || 'Falha no envio.')
+        return
+      }
+      setMsgEnvio(`Lote: ${resumoEnvio(j)}`)
+      if (!dry) await carregar()
+    } catch {
+      setMsgEnvio('Falha de conexão.')
+    } finally {
+      setEnviando(false)
+    }
+  }
+
   if (!unlocked) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-[#0b1120] px-4">
@@ -278,6 +332,24 @@ export default function AdminContatosPage() {
 
         {erro && <div className="card bg-white dark:bg-slate-900 p-4 text-sm text-danger">{erro}</div>}
         {msg && <div className="card bg-white dark:bg-slate-900 p-4 text-sm text-slate-600 dark:text-slate-300">{msg}</div>}
+
+        <div className="card bg-white dark:bg-slate-900 p-4">
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-1 flex items-center gap-2">
+            <Mail className="w-4 h-4 text-primary" /> Enviar e-mail de apresentação (outreach)
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+            1x por contato, em lotes de 20 por dia pelo cron. Use o teste para enviar apenas para um e-mail seu.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <input value={emailTeste} onChange={(e) => setEmailTeste(e.target.value)} placeholder="E-mail de teste" className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm w-56" />
+            <button onClick={enviarTeste} disabled={enviando} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50">Testar</button>
+            <button onClick={() => enviarOutreach(true)} disabled={enviando} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50">Dry-run (20)</button>
+            <button onClick={() => enviarOutreach(false)} disabled={enviando} className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-50">
+              {enviando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />} Enviar lote (20)
+            </button>
+          </div>
+          {msgEnvio && <p className="text-xs text-slate-600 dark:text-slate-300 mt-2">{msgEnvio}</p>}
+        </div>
 
         <div className="card bg-white dark:bg-slate-900 p-5">
           {contatos.length === 0 ? (

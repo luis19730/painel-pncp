@@ -66,6 +66,19 @@ interface ArquivoPncp {
   dataPublicacaoPncp?: string
 }
 
+/** Validação final de um e-mail (usada na extração E no envio). */
+export function emailEhValido(email: string): boolean {
+  const e = String(email || '').trim().toLowerCase()
+  if (!/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,24}$/.test(e)) return false
+  if (EMAILS_FALSOS.test(e)) return false
+  const dominio = e.split('@')[1] || ''
+  if (/\.\./.test(dominio) || dominio.startsWith('.') || dominio.endsWith('.')) return false
+  const tld = dominio.split('.').pop() || ''
+  // TLD improvável (ex.: "corrlbr" — 3+ consoantes seguidas): provável truncamento do PDF.
+  if (/[bcdfghjklmnpqrstvwxz]{3,}/.test(tld)) return false
+  return true
+}
+
 /** Extrai e normaliza e-mails do texto, removendo duplicados e falsos positivos. */
 export function extrairEmails(texto: string): string[] {
   if (!texto) return []
@@ -73,8 +86,7 @@ export function extrairEmails(texto: string): string[] {
   const set = new Set<string>()
   for (const bruto of achados) {
     const e = bruto.trim().toLowerCase().replace(/[.,;:]+$/, '')
-    if (!e || e.length > 254) continue
-    if (EMAILS_FALSOS.test(e)) continue
+    if (!emailEhValido(e)) continue
     set.add(e)
   }
   return Array.from(set)

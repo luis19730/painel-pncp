@@ -1,0 +1,41 @@
+name: Contatos — outreach diário
+
+# Dispara /api/cron/enviar-contatos, que envia o e-mail de apresentação do
+# Painel PNCP para os contatos extraídos dos editais — 1x por contato
+# (idempotente) e em lote controlado (default 20/dia) com pausa entre envios.
+# Para sozinho quando a base acaba.
+#
+# Secrets necessários (Settings > Secrets and variables > Actions):
+#   - PNCP_BASE_URL : https://www.painelpncp.com.br
+#   - CRON_SECRET   : mesmo valor do secret CRON_SECRET configurado no worker
+
+on:
+  schedule:
+    # 09:30 BRT (America/Sao_Paulo, UTC-3) = 12:30 UTC
+    - cron: '30 12 * * *'
+  workflow_dispatch:
+    inputs:
+      limite:
+        description: 'Quantos contatos enviar (1-50)'
+        required: false
+        default: '20'
+      dry:
+        description: 'Simular sem enviar (1 = sim)'
+        required: false
+        default: '0'
+
+jobs:
+  enviar-contatos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Disparar outreach
+        env:
+          PNCP_BASE_URL: ${{ secrets.PNCP_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          LIMITE: ${{ github.event.inputs.limite || '20' }}
+          DRY: ${{ github.event.inputs.dry || '0' }}
+        run: |
+          curl -fsS --fail-with-body --max-time 600 \
+            -H "x-cron-secret: ${CRON_SECRET}" \
+            "${PNCP_BASE_URL}/api/cron/enviar-contatos?limite=${LIMITE}&dry=${DRY}"
