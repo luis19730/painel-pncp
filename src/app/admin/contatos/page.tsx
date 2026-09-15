@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Download, FileSpreadsheet, Loader2, Mail, RefreshCw, ShieldAlert } from 'lucide-react'
+import { ArrowLeft, Download, FileSpreadsheet, Loader2, Mail, RefreshCw, ShieldAlert, Trash2 } from 'lucide-react'
 import { UFS_BRASIL } from '@/data/municipios'
 import { baixarCsv } from '@/lib/admin/csv'
 
@@ -16,6 +16,7 @@ interface Origem {
   arquivo_url?: string | null
 }
 interface Contato {
+  id: number
   orgao_cnpj: string
   orgao_nome: string | null
   uf: string | null
@@ -39,7 +40,13 @@ function origensTexto(origens: Origem[]): string {
 }
 
 export default function AdminContatosPage() {
-  const [pwd, setPwd] = useState('')
+  const [pwd, setPwd] = useState(() => {
+    try {
+      return sessionStorage.getItem(ADMIN_PWD_KEY) || ''
+    } catch {
+      return ''
+    }
+  })
   const [unlocked, setUnlocked] = useState(false)
   const [erroPwd, setErroPwd] = useState('')
   const [entrando, setEntrando] = useState(false)
@@ -92,10 +99,8 @@ export default function AdminContatosPage() {
   useEffect(() => {
     try {
       const ok = sessionStorage.getItem(ADMIN_OK_KEY) === '1'
-      const saved = sessionStorage.getItem(ADMIN_PWD_KEY) || ''
-      if (ok && saved) {
-        setPwd(saved)
-        carregar(saved)
+      if (ok && pwd) {
+        queueMicrotask(() => carregar(pwd))
       }
     } catch {
       /* ignore */
@@ -180,6 +185,25 @@ export default function AdminContatosPage() {
       setErro('Falha de conexão.')
     } finally {
       setExtraindo(false)
+    }
+  }
+
+  const excluir = async (c: Contato) => {
+    if (!window.confirm(`Excluir o contato "${c.contato_email}" (${c.orgao_nome || 'órgão desconhecido'})?`)) return
+    setErro('')
+    try {
+      const res = await fetch('/api/admin/contatos', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', 'x-admin-password': pwd },
+        body: JSON.stringify({ id: c.id }),
+        cache: 'no-store',
+      })
+      const data = await res.json()
+      if (!res.ok || !data.ok) throw new Error(data.erro || 'Falha ao excluir.')
+      setContatos((prev) => prev.filter((x) => x.id !== c.id))
+      setMsg(`Contato "${c.contato_email}" excluído.`)
+    } catch (e) {
+      setErro((e as Error).message || 'Falha ao excluir.')
     }
   }
 
@@ -294,6 +318,7 @@ export default function AdminContatosPage() {
                     <th className="py-2 pr-4">UF</th>
                     <th className="py-2 pr-4">Edital de origem</th>
                     <th className="py-2 pr-4">Extraído em</th>
+                    <th className="py-2 pr-4"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -304,6 +329,15 @@ export default function AdminContatosPage() {
                       <td className="py-2 pr-4">{c.uf || '—'}</td>
                       <td className="py-2 pr-4 text-slate-500 max-w-md">{origensTexto(c.editais_origem)}</td>
                       <td className="py-2 pr-4 text-slate-500">{dt(c.contato_extraido_em)}</td>
+                      <td className="py-2 pr-4 text-right">
+                        <button
+                          onClick={() => excluir(c)}
+                          title="Excluir contato"
+                          className="inline-flex items-center gap-1 rounded-lg border border-danger/30 bg-transparent px-2 py-1 text-xs font-semibold text-danger hover:bg-danger/10 transition-colors disabled:opacity-50"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" /> Excluir
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
