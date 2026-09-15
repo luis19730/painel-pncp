@@ -24,7 +24,7 @@ export async function POST(req: Request) {
   }
 
   const url = new URL(req.url)
-  const pedido = Number(url.searchParams.get('limite') || 3) || 3
+  const pedido = Number(url.searchParams.get('limite') || 2) || 2
   const limite = Math.min(10, Math.max(1, pedido))
 
   try {

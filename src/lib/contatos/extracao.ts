@@ -273,11 +273,18 @@ export async function processarEditalContato(
 
     // Tenta até 5 arquivos (alguns "arquivos" do processo não são o PDF do
     // edital — ex.: anexos em outro formato). O primeiro PDF com texto vence.
+    // Orçamento de ~12s por edital para não estourar o limite de CPU do Worker,
+    // e DPIs/scan enormes são rejeitados mais cedo pelo `extractPdfText`.
+    const deadline = Date.now() + 12_000
     let escolhido: ArquivoPncp | null = null
     let bytesPdf: Uint8Array | null = null
     let texto = ''
     let ultimoMotivo = 'sem_pdf'
     for (const arquivo of candidatos.slice(0, 5)) {
+      if (Date.now() > deadline) {
+        ultimoMotivo = 'tempo_esgotado'
+        break
+      }
       const d = await baixarArquivo(arquivo.url as string)
       if (!d.bytes) {
         ultimoMotivo = d.erro || 'download_falhou'
