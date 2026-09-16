@@ -119,10 +119,11 @@ export async function DELETE(req: Request) {
   const auth = await authorizeAdmin(req)
   if (!auth.ok) return auth.response
 
-  const json = (await req.json().catch(() => null)) as { id?: number } | null
-  const id = json?.id
-  if (!id || !Number.isFinite(id)) {
-    return NextResponse.json({ ok: false, erro: 'Informe o id do contato.' }, { status: 400 })
+  const json = (await req.json().catch(() => null)) as { id?: number; ids?: number[] } | null
+  const recebidos = Array.isArray(json?.ids) ? json!.ids : json?.id != null ? [json.id] : []
+  const ids = recebidos.map((n) => Number(n)).filter((n) => Number.isFinite(n))
+  if (ids.length === 0) {
+    return NextResponse.json({ ok: false, erro: 'Informe id ou ids do(s) contato(s).' }, { status: 400 })
   }
 
   let client
@@ -132,9 +133,9 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ ok: false, erro: 'Banco de dados não configurado.' }, { status: 503 })
   }
 
-  const { error: delError } = await client.from('edital_contatos').delete().eq('id', id)
+  const { error: delError } = await client.from('edital_contatos').delete().in('id', ids)
   if (delError) {
-    return NextResponse.json({ ok: false, erro: 'Falha ao excluir o contato.' }, { status: 500 })
+    return NextResponse.json({ ok: false, erro: 'Falha ao excluir o(s) contato(s).' }, { status: 500 })
   }
-  return NextResponse.json({ ok: true, id })
+  return NextResponse.json({ ok: true, ids, total: ids.length })
 }

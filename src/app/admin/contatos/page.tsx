@@ -63,6 +63,7 @@ export default function AdminContatosPage() {
   const [enviando, setEnviando] = useState(false)
   const [emailTeste, setEmailTeste] = useState('')
   const [msgEnvio, setMsgEnvio] = useState('')
+  const [selecionados, setSelecionados] = useState<Set<number>>(new Set())
   const [msg, setMsg] = useState('')
   const [erro, setErro] = useState('')
 
@@ -89,6 +90,7 @@ export default function AdminContatosPage() {
         const data = await res.json()
         if (!res.ok || !data.ok) throw new Error(data.erro || 'Falha ao carregar.')
         setContatos(data.contatos || [])
+        setSelecionados(new Set())
         setUnlocked(true)
       } catch (e) {
         setErro((e as Error).message || 'Falha ao carregar.')
@@ -140,18 +142,18 @@ export default function AdminContatosPage() {
     }
   }
 
-  const exportarCsv = () => {
+  const exportarCsv = (lista: Contato[] = contatos, nome = 'contatos-editais') => {
     baixarCsv(
-      'contatos-editais',
+      nome,
       ['Órgão', 'E-mail', 'UF', 'Edital de origem', 'Extraído em'],
-      contatos.map((c) => [c.orgao_nome || '', c.contato_email, c.uf || '', origensTexto(c.editais_origem), c.contato_extraido_em || ''])
+      lista.map((c) => [c.orgao_nome || '', c.contato_email, c.uf || '', origensTexto(c.editais_origem), c.contato_extraido_em || ''])
     )
   }
 
-  const exportarExcel = async () => {
+  const exportarExcel = async (lista: Contato[] = contatos, nome = 'contatos-editais') => {
     try {
       const XLSX = await import('xlsx')
-      const linhas = contatos.map((c) => ({
+      const linhas = lista.map((c) => ({
         Órgão: c.orgao_nome || '',
         'E-mail': c.contato_email,
         UF: c.uf || '',
@@ -161,9 +163,69 @@ export default function AdminContatosPage() {
       const ws = XLSX.utils.json_to_sheet(linhas)
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, 'Contatos')
-      XLSX.writeFile(wb, 'contatos-editais.xlsx')
+      XLSX.writeFile(wb, `${nome}.xlsx`)
     } catch {
       setErro('Não foi possível gerar o Excel. Use a exportação CSV.')
+    }
+  }
+
+  // ---- Seleção de contatos (checkboxes) ----
+  const toggleSel = (id: number) =>
+    setSelecionados((prev) => {
+      const n = new Set(prev)
+      if (n.has(id)) n.delete(id)
+      else n.add(id)
+      return n
+    })
+
+  const todosSelecionados = contatos.length > 0 && selecionados.size === contatos.length
+  const toggleTodos = () =>
+    setSelecionados(todosSelecionados ? new Set() : new Set(contatos.map((c) => c.id)))
+
+  const contatosSelecionados = () => contatos.filter((c) => selecionados.has(c.id))
+
+  const enviarSelecionados = async () => {
+    if (selecionados.size === 0) return
+    if (!confirm(`Enviar o e-mail de apresentação para ${selecionados.size} contato(s) selecionado(s)?`)) return
+    setEnviando(true)
+    setMsgEnvio('')
+    try {
+      const res = await fetch(`/api/admin/contatos/enviar?ids=${Array.from(selecionados).join(',')}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-password': pwd },
+      })
+      const j = await res.json()
+      if (!res.ok || !j.ok) {
+        setMsgEnvio(j.erro || 'Falha no envio.')
+        return
+      }
+      setMsgEnvio(`Selecionados: ${resumoEnvio(j)}`)
+      setSelecionados(new Set())
+      await carregar()
+    } catch {
+      setMsgEnvio('Falha de conexão.')
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  const excluirSelecionados = async () => {
+    if (selecionados.size === 0) return
+    if (!confirm(`Excluir ${selecionados.size} contato(s) selecionado(s)?`)) return
+    setErro('')
+    try {
+      const res = await fetch('/api/admin/contatos', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', 'x-admin-password': pwd },
+        body: JSON.stringify({ ids: Array.from(selecionados) }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.ok) throw new Error(data.erro || 'Falha ao excluir.')
+      setContatos((prev) => prev.filter((x) => !selecionados.has(x.id)))
+      setMsg(`${data.total || selecionados.size} contato(s) excluído(s).`)
+      setSelecionados(new Set())
+    } catch (e) {
+      setErro((e as Error).message || 'Falha ao excluir.')
     }
   }
 
@@ -312,10 +374,10 @@ export default function AdminContatosPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button onClick={exportarCsv} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
+            <button onClick={() => exportarCsv()} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
               <Download className="w-4 h-4" /> CSV
             </button>
-            <button onClick={exportarExcel} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
+            <button onClick={() => exportarExcel()} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
               <FileSpreadsheet className="w-4 h-4" /> Excel
             </button>
             <button onClick={() => carregar()} disabled={carregando} className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-50">
@@ -376,6 +438,28 @@ export default function AdminContatosPage() {
         </div>
 
         <div className="card bg-white dark:bg-slate-900 p-5">
+          {contatos.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 mb-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 mr-1">
+                {selecionados.size > 0 ? `${selecionados.size} selecionado(s)` : 'Marque contatos para enviar/exportar'}
+              </span>
+              <button onClick={enviarSelecionados} disabled={enviando || selecionados.size === 0} className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-white hover:bg-primary-hover disabled:opacity-40">
+                {enviando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />} Enviar selecionados
+              </button>
+              <button onClick={() => exportarCsv(contatosSelecionados(), 'contatos-selecionados')} disabled={selecionados.size === 0} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40">
+                <Download className="w-3.5 h-3.5" /> CSV
+              </button>
+              <button onClick={() => exportarExcel(contatosSelecionados(), 'contatos-selecionados')} disabled={selecionados.size === 0} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40">
+                <FileSpreadsheet className="w-3.5 h-3.5" /> Excel
+              </button>
+              <button onClick={excluirSelecionados} disabled={selecionados.size === 0} className="inline-flex items-center gap-1.5 rounded-xl border border-danger/30 px-3 py-2 text-xs font-semibold text-danger hover:bg-danger/10 disabled:opacity-40">
+                <Trash2 className="w-3.5 h-3.5" /> Excluir
+              </button>
+              <button onClick={() => setSelecionados(new Set())} disabled={selecionados.size === 0} className="text-xs font-semibold text-slate-400 hover:text-slate-600 disabled:opacity-40">
+                Limpar
+              </button>
+            </div>
+          )}
           {contatos.length === 0 ? (
             <p className="text-sm text-slate-400 text-center py-10">
               Nenhum contato encontrado. Rode o cron de extração (`/api/cron/extrair-contatos`) para popular a base.
@@ -385,6 +469,9 @@ export default function AdminContatosPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs text-slate-400 uppercase">
+                    <th className="py-2 pr-3 w-8">
+                      <input type="checkbox" checked={todosSelecionados} onChange={toggleTodos} aria-label="Selecionar todos" />
+                    </th>
                     <th className="py-2 pr-4">Órgão</th>
                     <th className="py-2 pr-4">E-mail</th>
                     <th className="py-2 pr-4">UF</th>
@@ -396,6 +483,9 @@ export default function AdminContatosPage() {
                 <tbody>
                   {contatos.map((c) => (
                     <tr key={`${c.orgao_cnpj}-${c.contato_email}`} className="border-t border-slate-100 dark:border-slate-800">
+                      <td className="py-2 pr-3">
+                        <input type="checkbox" checked={selecionados.has(c.id)} onChange={() => toggleSel(c.id)} aria-label={`Selecionar ${c.contato_email}`} />
+                      </td>
                       <td className="py-2 pr-4 text-slate-700 dark:text-slate-200">{c.orgao_nome || '—'}</td>
                       <td className="py-2 pr-4 text-primary font-medium">{c.contato_email}</td>
                       <td className="py-2 pr-4">{c.uf || '—'}</td>

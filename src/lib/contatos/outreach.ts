@@ -38,7 +38,7 @@ export interface ResumoEnvio {
 export async function enviarLoteContatos(
   client: AnyClient,
   limite: number,
-  opts: { siteUrl: string; dryRun?: boolean; paraEmail?: string }
+  opts: { siteUrl: string; dryRun?: boolean; paraEmail?: string; ids?: number[] }
 ): Promise<ResumoEnvio> {
   const base = String(opts.siteUrl || 'https://www.painelpncp.com.br').replace(/\/$/, '')
   const cadastroLink = `${base}/cadastro`
@@ -64,16 +64,23 @@ export async function enviarLoteContatos(
     }
   }
 
-  const lim = Math.min(50, Math.max(1, Math.floor(limite) || 1))
+  const idsSelecionados = Array.isArray(opts.ids) ? opts.ids.filter((n) => Number.isFinite(n)) : []
+  const lim = idsSelecionados.length > 0
+    ? Math.min(50, idsSelecionados.length)
+    : Math.min(50, Math.max(1, Math.floor(limite) || 1))
   const ignorados = new Set(emailsIgnorados().map((e) => e.toLowerCase()))
 
-  const { data, error } = await client
+  // Seleção explícita (checkboxes) envia exatamente os IDs escolhidos — mesmo
+  // que já tenham recebido antes. Sem seleção, pega os próximos ainda não
+  // contactados (comportamento do cron).
+  let consulta = client
     .from('edital_contatos')
     .select('id,orgao_nome,contato_email,outreach_tentativas')
-    .is('outreach_enviado_em', null)
-    .lt('outreach_tentativas', MAX_TENTATIVAS)
-    .order('id', { ascending: true })
-    .limit(lim)
+  consulta = idsSelecionados.length > 0
+    ? consulta.in('id', idsSelecionados)
+    : consulta.is('outreach_enviado_em', null).lt('outreach_tentativas', MAX_TENTATIVAS)
+
+  const { data, error } = await consulta.order('id', { ascending: true }).limit(lim)
 
   if (error) {
     return { dryRun, limite: lim, selecionados: 0, enviados: 0, pulados: 0, falhas: 0, resultados: [] }

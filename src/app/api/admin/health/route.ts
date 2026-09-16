@@ -110,6 +110,33 @@ export async function GET(req: Request) {
   }
   checagens.push({ item: 'API PNCP', ok: pncpOk, detalhe: pncpOk ? pncpDetalhe : `Inacessível (${pncpDetalhe})` })
 
+  // 5b. Login Google (OAuth) — confirma que o provedor Google está habilitado
+  // no Supabase (a rota /authorize deve responder 302 para accounts.google.com).
+  let oauthOk = false
+  let oauthDetalhe = 'Não verificado'
+  try {
+    const sb = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    if (!sb) {
+      oauthDetalhe = 'NEXT_PUBLIC_SUPABASE_URL ausente'
+    } else {
+      const redirectTo = encodeURIComponent(`${sb}/auth/v1/callback`)
+      const resp = await fetch(`${sb}/auth/v1/authorize?provider=google&redirect_to=${redirectTo}`, {
+        method: 'GET',
+        redirect: 'manual',
+        signal: AbortSignal.timeout(8000),
+        headers: { Accept: 'application/json' },
+      })
+      const loc = resp.headers.get('location') || ''
+      oauthOk = resp.status === 302 && loc.includes('accounts.google.com')
+      oauthDetalhe = oauthOk
+        ? 'Provedor Google habilitado (302)'
+        : `HTTP ${resp.status}${loc ? ` → ${loc.slice(0, 60)}` : ''}`
+    }
+  } catch (e) {
+    oauthDetalhe = (e as Error)?.message || 'timeout'
+  }
+  checagens.push({ item: 'Login Google (OAuth)', ok: oauthOk, detalhe: oauthDetalhe })
+
   // 6. Fluxo de eventos recentes
   const ha1h = new Date(agora.getTime() - 60 * 60 * 1000)
   const { count: eventos1h } = await client

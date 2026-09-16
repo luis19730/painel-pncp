@@ -30,11 +30,17 @@ export async function POST(req: Request) {
   const limite = Math.min(50, Math.max(1, pedido))
   const dryRun = url.searchParams.get('dry') === '1'
   const paraEmail = (url.searchParams.get('para') || '').trim()
+  const idsParam = (url.searchParams.get('ids') || '').trim()
+  const ids = idsParam
+    .split(',')
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isFinite(n))
 
   const resultado = await enviarLoteContatos(client, limite, {
     siteUrl: siteBaseUrl(req),
     dryRun,
     paraEmail: paraEmail || undefined,
+    ids: ids.length > 0 ? ids : undefined,
   })
   return NextResponse.json({ ok: true, ...resultado })
 }
