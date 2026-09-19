@@ -11,6 +11,7 @@ import { searchLiveOpportunities, searchLivePriceData, priceStatsFromRecords } f
 import type { PriceStats } from '@/lib/market-data'
 import type { Opportunity } from '@/types'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import ConsultaRapida from '@/components/marketing/consulta-rapida'
 
 export default function HomeContent() {
   const [opps, setOpps] = useState<Opportunity[] | null>(null)
@@ -90,10 +91,16 @@ export default function HomeContent() {
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </Link>
-                <a href="#como-funciona">
+                <a href="#consulta">
                   <button className="inline-flex items-center justify-center gap-2 rounded-xl bg-white dark:bg-slate-800 px-7 py-3.5 text-base font-semibold text-slate-700 dark:text-slate-100 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">
-                    Ver como funciona
+                    Fazer uma busca rápida
                   </button>
+                </a>
+              </div>
+
+              <div className="mt-4 text-center lg:text-left">
+                <a href="#como-funciona" className="text-sm font-semibold text-primary hover:underline">
+                  Ver como funciona →
                 </a>
               </div>
 
@@ -164,6 +171,9 @@ export default function HomeContent() {
           </div>
         </div>
       </section>
+
+      {/* Consulta rápida (integr. landing) — busca real no PNCP */}
+      <ConsultaRapida />
 
       {/* NOVO RECURSO — Pesquisa de Preços Inteligente (banner comercial) */}
       <section className="relative overflow-hidden bg-gradient-to-r from-primary via-secondary to-accent">
