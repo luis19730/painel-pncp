@@ -41,13 +41,13 @@ export default function SearchHero({
   return (
     <section className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-gradient-to-br from-blue-50 via-white to-white dark:from-slate-900 dark:to-slate-900 p-6 md:p-10">
       <div className="max-w-2xl">
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft text-primary dark:bg-blue-500/10 dark:text-blue-300 px-3 py-1 text-xs font-semibold mb-4">
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 text-primary dark:bg-primary/15 dark:text-blue-300 px-3 py-1 text-xs font-bold uppercase tracking-wider mb-4">
           <Sparkles className="w-3.5 h-3.5" /> Pesquisa de Preços Inteligente
         </div>
-        <h1 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-2">
+        <h1 className="text-3xl md:text-4xl font-extrabold font-display text-slate-900 dark:text-white mb-3">
           O que você está procurando?
         </h1>
-        <p className="text-sm md:text-base text-slate-500 dark:text-slate-400 mb-5">
+        <p className="text-base md:text-lg text-slate-500 dark:text-slate-400 mb-5">
           Pesquise produtos ou serviços e descubra os preços praticados em contratações públicas — em poucos minutos e sem treinamento.
         </p>
 

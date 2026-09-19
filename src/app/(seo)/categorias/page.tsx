@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Section, SectionHead } from '@/components/marketing/section'
 
 export const metadata = {
   title: 'Licitações por Categoria',
@@ -22,25 +23,29 @@ const categorias = [
 
 export default function CategoriasPage() {
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">Categorias de Licitações</h1>
-      <p className="text-gray-500 mb-8">Encontre licitações por segmento de atuação</p>
+    <Section>
+      <SectionHead
+        eyebrow="Segmentos"
+        title="Categorias de Licitações"
+        subtitle="Encontre licitações por segmento de atuação"
+        as="h1"
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {categorias.map(cat => (
+        {categorias.map((cat) => (
           <Link
             key={cat.slug}
             href={`/categorias/${cat.slug}`}
-            className="flex items-center gap-4 p-5 bg-white rounded-xl border border-gray-200 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
+            className="card p-5 flex items-center gap-4 hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
           >
-            <span className="text-3xl">{cat.icon}</span>
+            <span className="text-3xl" aria-hidden>{cat.icon}</span>
             <div>
-              <h3 className="font-semibold text-gray-900">{cat.label}</h3>
-              <p className="text-sm text-gray-500">Ver oportunidades</p>
+              <h3 className="font-semibold text-slate-900 dark:text-white">{cat.label}</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Ver oportunidades</p>
             </div>
           </Link>
         ))}
       </div>
-    </div>
+    </Section>
   )
 }

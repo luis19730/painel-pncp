@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { fetchSeoLicitacoes } from '@/lib/seo-data'
+import { Section, SectionHead } from '@/components/marketing/section'
 
 const categoriasMap: Record<string, string> = {
   'informatica': 'Informática',
@@ -44,14 +45,18 @@ interface SeoItem {
 }
 
 function formatDate(d: string) {
-  try { return new Date(d).toLocaleDateString('pt-BR') } catch { return d }
+  try {
+    return new Date(d).toLocaleDateString('pt-BR')
+  } catch {
+    return d
+  }
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
   const nome = categoriasMap[slug] || slug
   return {
-    title: `Licitações de ${nome} - Painel PNCP`,
+    title: `Licitações de ${nome}`,
     description: `Encontre licitações públicas de ${nome} no Portal Nacional de Contratações Públicas.`,
   }
 }
@@ -64,25 +69,30 @@ export default async function CategoriaPage({ params }: { params: Promise<{ slug
   const items = (await fetchSeoLicitacoes({ q })) as unknown as SeoItem[]
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
-      <nav className="text-sm text-gray-500 mb-4">
-        <Link href="/licitacoes" className="hover:text-gray-900">Licitações</Link>
+    <Section narrow>
+      <nav className="text-sm text-slate-400 mb-4">
+        <Link href="/licitacoes" className="hover:text-primary">Licitações</Link>
         <span className="mx-2">/</span>
-        <Link href="/categorias" className="hover:text-gray-900">Categorias</Link>
+        <Link href="/categorias" className="hover:text-primary">Categorias</Link>
         <span className="mx-2">/</span>
-        <span className="text-gray-900">{nome}</span>
+        <span className="text-slate-600 dark:text-slate-300">{nome}</span>
       </nav>
 
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">Licitações de {nome}</h1>
-      <p className="text-gray-500 mb-8">
-        {items.length > 0 ? `${items.length} oportunidades encontradas` : 'Nenhuma oportunidade encontrada'}
-      </p>
+      <SectionHead
+        title={`Licitações de ${nome}`}
+        subtitle={
+          items.length > 0
+            ? `${items.length} oportunidades encontradas`
+            : 'Nenhuma oportunidade encontrada'
+        }
+        as="h1"
+      />
 
       <div className="space-y-3">
         {items.map((item) => (
-          <div key={item.numeroControlePNCP} className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
-            <p className="font-semibold text-gray-900 line-clamp-2">{item.objetoCompra}</p>
-            <div className="flex flex-wrap gap-3 mt-2 text-xs text-gray-500">
+          <div key={item.numeroControlePNCP} className="card p-4 hover:shadow-md transition-shadow">
+            <p className="font-semibold text-slate-900 dark:text-white line-clamp-2">{item.objetoCompra}</p>
+            <div className="flex flex-wrap gap-3 mt-2 text-xs text-slate-500 dark:text-slate-400">
               <span>{item.orgaoNome}</span>
               <span>{item.municipioNome && `${item.municipioNome}/${item.uf}`}</span>
               <span>{item.modalidadeNome}</span>
@@ -92,11 +102,11 @@ export default async function CategoriaPage({ params }: { params: Promise<{ slug
           </div>
         ))}
         {items.length === 0 && (
-          <div className="text-center py-12 text-gray-400">
+          <div className="text-center py-12 text-slate-400">
             Nenhuma oportunidade encontrada para esta categoria.
           </div>
         )}
       </div>
-    </div>
+    </Section>
   )
 }
