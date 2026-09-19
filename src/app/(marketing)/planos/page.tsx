@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Check, Sparkles, Building2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import PlanCtaLink from '@/components/marketing/plan-cta-link'
+import { Section, SectionHead } from '@/components/marketing/section'
 import { track } from '@/lib/analytics'
 import { CICLOS, PLANOS, precoCiclo, precoMensalEquivalente, formatReais } from '@/lib/asaas/types'
 import type { CicloId } from '@/lib/asaas/types'
@@ -42,17 +43,14 @@ export default function PlanosPage() {
   }, [])
 
   return (
-    <div className="py-16 md:py-24">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="text-center mb-12">
-          <p className="text-sm font-bold text-primary dark:text-primary uppercase tracking-wider mb-3">Planos e preços</p>
-          <h1 className="text-4xl md:text-5xl font-extrabold font-display text-slate-900 dark:text-white mb-4">
-            Escolha o plano ideal para sua empresa
-          </h1>
-          <p className="text-lg text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
-            Teste grátis por 15 dias. Depois escolha o plano ideal para sua empresa.
-          </p>
-        </div>
+    <Section>
+      <SectionHead
+        align="center"
+        eyebrow="Planos e preços"
+        title="Escolha o plano ideal para sua empresa"
+        subtitle="Teste grátis por 15 dias. Depois escolha o plano ideal para sua empresa."
+        as="h1"
+      />
 
         {/* Seletor de periodicidade */}
         <div className="flex flex-wrap justify-center gap-2 mb-14">
@@ -160,7 +158,6 @@ export default function PlanosPage() {
             Todos os planos incluem teste grátis de 15 dias. A primeira cobrança ocorre somente após o término do período de teste.
           </p>
         </div>
-      </div>
-    </div>
+    </Section>
   )
 }
