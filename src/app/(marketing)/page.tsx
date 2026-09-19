@@ -2,21 +2,21 @@ import type { Metadata } from 'next'
 import HomeContent from '@/components/marketing/home-content'
 
 export const metadata: Metadata = {
-  title: 'Pesquisa de Preços Inteligente e licitações no PNCP',
+  title: { absolute: 'Painel PNCP - Consulta de Licitações e Montagem de Processos' },
   description:
-    'Painel PNCP: pesquisa de preços inteligente para licitações e contratação pública, análise de oportunidades, mapa de preços, radar e auxílio na montagem de processo. Encontre, analise e gere relatórios de preços para compras públicas.',
+    'Consulte licitações do PNCP em segundos, filtre editais por UF, modalidade e valor e monte processos licitatórios com apoio da ferramenta. Comece gratuitamente.',
   openGraph: {
-    title: 'Pesquisa de Preços Inteligente e licitações no PNCP',
+    title: 'Painel PNCP - Consulta de Licitações e Montagem de Processos',
     description:
-      'Encontre referências de preços, analise e compare resultados e gere um relatório de pesquisa de preços para auxiliar na instrução do seu processo de contratação pública.',
+      'Encontre e analise editais do PNCP com filtros avançados e apoio na montagem de processos licitatórios. Comece gratuitamente.',
     type: 'website',
     siteName: 'Painel PNCP',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Pesquisa de Preços Inteligente e licitações no PNCP',
+    title: 'Painel PNCP - Consulta de Licitações e Montagem de Processos',
     description:
-      'Pesquisa de preços inteligente para compras públicas, licitações e contratação pública, com geração de relatório organizado.',
+      'Consulte licitações do PNCP em segundos e monte processos com mais agilidade.',
   },
 }
 
