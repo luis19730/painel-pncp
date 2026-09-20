@@ -231,6 +231,7 @@ export default function BuscaPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Digite sua busca (ex: notebook, papel A4, limpeza, 231226...)"
+          title="Busca por palavra-chave: procura no nome/descrição do item, código e órgão."
           className="w-full pl-12 pr-20 py-4 border border-slate-200 dark:border-slate-700 rounded-xl text-base bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent shadow-sm"
         />
         <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
@@ -247,13 +248,13 @@ export default function BuscaPage() {
           <Filter className="w-4 h-4" />
           Filtros
         </div>
-        <select value={draft.uf} onChange={(e) => setFilter('uf', e.target.value)} className={SELECT_CLS}>
+        <select value={draft.uf} onChange={(e) => setFilter('uf', e.target.value)} className={SELECT_CLS} title="Filtra pelo estado (UF) do órgão comprador.">
           <option value="">UF</option>
           {UF_OPTIONS.map((u) => (
             <option key={u} value={u}>{u}</option>
           ))}
         </select>
-        <select value={draft.modalidade} onChange={(e) => setFilter('modalidade', e.target.value)} className={SELECT_CLS}>
+        <select value={draft.modalidade} onChange={(e) => setFilter('modalidade', e.target.value)} className={SELECT_CLS} title="Modalidade de contratação (ex.: Pregão Eletrônico, Concorrência, Dispensa).">
           <option value="">Modalidade</option>
           {MODALIDADES.map((m) => (
             <option key={m} value={m}>{m}</option>
@@ -264,6 +265,7 @@ export default function BuscaPage() {
           value={draft.orgao}
           onChange={(e) => setFilter('orgao', e.target.value)}
           placeholder="Órgão"
+          title="Trecho do nome do órgão comprador."
           className='w-56 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-sm bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-primary focus:outline-none'
         />
         <input
@@ -271,14 +273,15 @@ export default function BuscaPage() {
           value={draft.municipio}
           onChange={(e) => setFilter('municipio', e.target.value)}
           placeholder="Município"
+          title="Trecho do nome do município atendido pelo edital."
           className='w-36 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-sm bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-primary focus:outline-none'
         />
-        <select value={draft.periodo} onChange={(e) => setFilter('periodo', Number(e.target.value))} className={SELECT_CLS}>
+        <select value={draft.periodo} onChange={(e) => setFilter('periodo', Number(e.target.value))} className={SELECT_CLS} title="Janela de tempo da publicação do edital.">
           {PERIODOS.map((p) => (
             <option key={p.days} value={p.days}>{p.label}</option>
           ))}
         </select>
-        <select value={draft.situacao} onChange={(e) => setFilter('situacao', e.target.value)} className={SELECT_CLS}>
+        <select value={draft.situacao} onChange={(e) => setFilter('situacao', e.target.value)} className={SELECT_CLS} title="Filtra por editais com prazo aberto ou já encerrado.">
           <option value="">Situação</option>
           {SITUACOES.map((s) => (
             <option key={s} value={s}>{s}</option>
@@ -291,6 +294,7 @@ export default function BuscaPage() {
           value={draft.valorMin}
           onChange={(e) => setFilter('valorMin', e.target.value)}
           placeholder="Valor mín."
+          title="Valor estimado mínimo do edital (R$)."
           className={INPUT_CLS}
         />
         <input
@@ -300,6 +304,7 @@ export default function BuscaPage() {
           value={draft.valorMax}
           onChange={(e) => setFilter('valorMax', e.target.value)}
           placeholder="Valor máx."
+          title="Valor estimado máximo do edital (R$)."
           className={INPUT_CLS}
         />
         <button

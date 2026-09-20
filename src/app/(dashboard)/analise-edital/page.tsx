@@ -504,9 +504,9 @@ export default function AnaliseEditalPage() {
         </div>
 
         <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-700 p-1 bg-slate-50 dark:bg-slate-800/60 mb-5 flex-wrap">
-          <TabButton active={modo === 'texto'} onClick={() => setModo('texto')} icon={<Clipboard className="w-4 h-4" />}>Colar texto</TabButton>
-          <TabButton active={modo === 'pdf'} onClick={() => setModo('pdf')} icon={<FileText className="w-4 h-4" />}>Enviar PDF</TabButton>
-          <TabButton active={modo === 'pncp'} onClick={() => setModo('pncp')} icon={<Link2 className="w-4 h-4" />}>Link do PNCP</TabButton>
+          <TabButton active={modo === 'texto'} onClick={() => setModo('texto')} icon={<Clipboard className="w-4 h-4" />} title="Cole o texto do edital: a IA extrai objeto, exigências de habilitação, prazos, riscos e documentos necessários.">Colar texto</TabButton>
+          <TabButton active={modo === 'pdf'} onClick={() => setModo('pdf')} icon={<FileText className="w-4 h-4" />} title="Envie o PDF do edital (com camada de texto, até 8 MB / 60 páginas). PDFs escaneados usam OCR.">Enviar PDF</TabButton>
+          <TabButton active={modo === 'pncp'} onClick={() => setModo('pncp')} icon={<Link2 className="w-4 h-4" />} title="Informe o link/número do PNCP; a IA analisa os dados oficiais disponíveis no portal.">Link do PNCP</TabButton>
         </div>
 
         {modo === 'texto' && (
@@ -516,6 +516,7 @@ export default function AnaliseEditalPage() {
               onChange={(e) => setTexto(e.target.value)}
               rows={9}
               placeholder="Cole aqui o texto do edital de licitação (objeto, condições, prazos, habilitação etc.)..."
+              title="Texto do edital: quanto mais completo, melhor a análise (objeto, habilitação, prazos, riscos, anexos)."
               className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
             />
             <p className="mt-1.5 text-[11px] text-slate-400">
@@ -570,6 +571,7 @@ export default function AnaliseEditalPage() {
                 value={link}
                 onChange={(e) => setLink(e.target.value)}
                 placeholder="https://pncp.gov.br/app/compras/... ou CNPJ-1-999999/2026"
+                title="Cole o link do PNCP ou o número de controle (CNPJ-1-SEQ/ANO)."
                 className="flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               />
             </div>
@@ -835,15 +837,18 @@ function TabButton({
   onClick,
   children,
   icon,
+  title,
 }: {
   active: boolean
   onClick: () => void
   children: React.ReactNode
   icon: React.ReactNode
+  title?: string
 }) {
   return (
     <button
       onClick={onClick}
+      title={title}
       className={cn(
         'inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors',
         active

@@ -9,61 +9,76 @@ import {
   Sparkles, Layers, ShieldAlert,
   ListChecks, FileCheck, FolderOpen,
   Star, FileBarChart, Calendar,
-  Building2, Settings, HelpCircle, Type, Zap
+  Building2, Settings, HelpCircle, Type, Zap, Home
 } from 'lucide-react'
+
+// ============================================================================
+// Navegação organizada pela JORNADA de quem trabalha com licitações:
+//   ENCONTRAR → ANALISAR → PRECIFICAR → MONTAR PROCESSO → ACOMPANHAR
+//   + CONCORRENTES e APRENDER.
+// Todas as rotas/funções existentes foram mantidas (apenas reagrupadas e
+// renomeadas). Nenhuma rota mudou — não há redirects 301 necessários.
+// ============================================================================
 const navGroups = [
   {
-    icon: Search,
     label: 'ENCONTRAR',
     items: [
-      { href: '/dashboard', label: 'Oportunidades', icon: Search },
-      { href: '/busca', label: 'Buscar', icon: Search },
-      { href: '/credenciamento-sicx', label: 'SICX', icon: Zap },
-      { href: '/meu-radar', label: 'Meu Radar', icon: Radar },
-      { href: '/alertas', label: 'Alertas', icon: Bell },
+      { href: '/dashboard', label: 'Início', icon: Home },
+      { href: '/oportunidades', label: 'Editais abertos', icon: Search },
+      { href: '/busca', label: 'Busca avançada', icon: Search },
+      { href: '/modalidades', label: 'Modalidades', icon: Layers },
+      { href: '/credenciamento-sicx', label: 'Credenciamento (SICX)', icon: Zap },
+      { href: '/score', label: 'Score de oportunidade', icon: Gauge },
     ],
   },
   {
     label: 'ANALISAR',
     items: [
-      { href: '/precos', label: 'Mapa de Preços', icon: TrendingUp },
-      { href: '/precos-inteligentes', label: 'Pesquisa de Preços', icon: TrendingUp },
-      { href: '/concorrentes', label: 'Concorrentes', icon: Users },
-      { href: '/analise-edital', label: 'Análise de Edital', icon: FileSearch },
-      { href: '/score', label: 'Score', icon: Gauge },
-    ],
-  },
-  {
-    label: 'INTELIGÊNCIA',
-    items: [
-      { href: '/ia-licitacoes', label: 'IA', icon: Sparkles, premium: true },
-      { href: '/modalidades', label: 'Modalidades', icon: Layers },
+      { href: '/analise-edital', label: 'Análise de Edital (IA)', icon: FileSearch },
+      { href: '/ia-licitacoes', label: 'IA para Licitações', icon: Sparkles, premium: true },
       { href: '/estudo-tecnico', label: 'Estudo Técnico', icon: FileSearch },
       { href: '/matriz-riscos', label: 'Matriz de Riscos', icon: ShieldAlert },
     ],
   },
   {
-    label: 'PREPARAR',
+    label: 'PRECIFICAR',
     items: [
+      { href: '/precos', label: 'Mapa de Preços', icon: TrendingUp },
+      { href: '/precos-inteligentes', label: 'Pesquisa de Preços', icon: TrendingUp },
+      { href: '/sinapi', label: 'SINAPI', icon: Layers },
+    ],
+  },
+  {
+    label: 'MONTAR PROCESSO',
+    items: [
+      { href: '/montagem-processo', label: 'Montar Processo', icon: FileCheck },
+      { href: '/meus-processos', label: 'Meus Processos', icon: FolderOpen },
       { href: '/checklist', label: 'Checklist', icon: ListChecks },
       { href: '/justificativa', label: 'Justificativa', icon: FileCheck },
       { href: '/documentos', label: 'Documentos', icon: FolderOpen },
     ],
   },
   {
-    label: 'CONTRATAÇÕES',
+    label: 'ACOMPANHAR',
     items: [
-      { href: '/montagem-processo', label: 'Montar Processo', icon: FileCheck },
-      { href: '/meus-processos', label: 'Meus Processos', icon: FolderOpen },
-      { href: '/sinapi', label: 'SINAPI', icon: Layers },
+      { href: '/meu-radar', label: 'Meu Radar', icon: Radar },
+      { href: '/alertas', label: 'Alertas', icon: Bell },
+      { href: '/favoritos', label: 'Favoritos', icon: Star },
+      { href: '/calendario', label: 'Calendário de sessões', icon: Calendar },
     ],
   },
   {
-    label: 'GERENCIAR',
+    label: 'CONCORRENTES',
     items: [
-      { href: '/favoritos', label: 'Favoritos', icon: Star },
-      { href: '/relatorios', label: 'Relatórios', icon: FileBarChart },
-      { href: '/calendario', label: 'Calendário', icon: Calendar },
+      { href: '/concorrentes', label: 'Concorrentes', icon: Users },
+      { href: '/relatorios', label: 'Relatórios e vencedores', icon: FileBarChart },
+    ],
+  },
+  {
+    label: 'APRENDER',
+    items: [
+      { href: '/ajuda', label: 'Ajuda', icon: HelpCircle },
+      { href: '/sicx', label: 'O que é o SICX', icon: Zap },
     ],
   },
 ]
@@ -73,7 +88,6 @@ const bottomNav = [
   { href: '/configuracoes', label: 'Configurações', icon: Settings },
   { href: '/minha-assinatura', label: 'Minha Assinatura', icon: Type },
   { href: '/planos', label: 'Planos', icon: Building2, external: true },
-  { href: '/ajuda', label: 'Ajuda', icon: HelpCircle },
 ]
 
 export default function Sidebar() {

@@ -237,6 +237,7 @@ export default function OportunidadesPage() {
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             placeholder="Buscar por palavra-chave (nome, descrição, código, órgão, fornecedor)..."
+            title="Busca por palavra-chave no objeto, órgão, município e número do edital."
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
           />
         </div>
@@ -250,13 +251,13 @@ export default function OportunidadesPage() {
           <Filter className="w-4 h-4" />
           Filtros:
         </div>
-        <select value={filters.uf} onChange={(e) => setFilter('uf', e.target.value)} className={SELECT_CLS}>
+        <select value={filters.uf} onChange={(e) => setFilter('uf', e.target.value)} className={SELECT_CLS} title="Filtra pelo estado (UF) do órgão comprador.">
           <option value="">UF (Todas)</option>
           {UF_OPTIONS.map((uf) => (
             <option key={uf} value={uf}>{uf}</option>
           ))}
         </select>
-        <select value={filters.modalidade} onChange={(e) => setFilter('modalidade', e.target.value)} className={SELECT_CLS}>
+        <select value={filters.modalidade} onChange={(e) => setFilter('modalidade', e.target.value)} className={SELECT_CLS} title="Modalidade de contratação (ex.: Pregão Eletrônico, Concorrência).">
           <option value="">Modalidade (Todas)</option>
           {MODALIDADES.map((m) => (
             <option key={m} value={m}>{m}</option>
@@ -267,6 +268,7 @@ export default function OportunidadesPage() {
           value={filters.municipio}
           onChange={(e) => setFilter('municipio', e.target.value)}
           placeholder="Município"
+          title="Trecho do nome do município."
           className="w-40 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-primary focus:outline-none"
         />
         <input
@@ -274,9 +276,10 @@ export default function OportunidadesPage() {
           value={filters.orgao}
           onChange={(e) => setFilter('orgao', e.target.value)}
           placeholder="Órgão"
+          title="Trecho do nome do órgão comprador."
           className="w-56 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-primary focus:outline-none"
         />
-        <select value={filters.situacao} onChange={(e) => setFilter('situacao', e.target.value)} className={SELECT_CLS}>
+        <select value={filters.situacao} onChange={(e) => setFilter('situacao', e.target.value)} className={SELECT_CLS} title="Editais com prazo aberto ou já encerrado.">
           <option value="">Situação (Todas)</option>
           {SITUACOES.map((s) => (
             <option key={s} value={s}>{s}</option>
@@ -289,6 +292,7 @@ export default function OportunidadesPage() {
           value={filters.valorMin}
           onChange={(e) => setFilter('valorMin', e.target.value)}
           placeholder="Valor mín."
+          title="Valor estimado mínimo do edital (R$)."
           className="w-28 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-primary focus:outline-none"
         />
         <input
@@ -298,6 +302,7 @@ export default function OportunidadesPage() {
           value={filters.valorMax}
           onChange={(e) => setFilter('valorMax', e.target.value)}
           placeholder="Valor máx."
+          title="Valor estimado máximo do edital (R$)."
           className="w-28 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-primary focus:outline-none"
         />
         <button

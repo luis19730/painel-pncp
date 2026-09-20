@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { TrendingUp, FileText, Clock, AlertTriangle, Heart, DollarSign, Search, Radar, ArrowRight, Building2, AlertCircle } from 'lucide-react';
+import { TrendingUp, FileText, Clock, AlertTriangle, Heart, DollarSign, Search, Radar, ArrowRight, Building2, AlertCircle, Calendar, Sparkles, Users, CheckCircle2, FileSearch } from 'lucide-react';
 import OpportunityCard from '@/components/opportunities/opportunity-card';
 import StatCard from '@/components/ui/stat-card';
 import PageHeader from '@/components/ui/page-header';
@@ -11,7 +11,7 @@ import DemoNotice from '@/components/ui/demo-notice';
 import DataSourceNotice, { type DataSource } from '@/components/ui/data-source-notice';
 import { Badge } from '@/components/ui/badge';
 import { CardSkeleton, StatsSkeleton } from '@/components/ui/skeleton';
-import { formatCurrency, normalizar } from '@/lib/utils';
+import { formatCurrency, normalizar, formatDate, getDaysUntil, getDeadlineColor, cn } from '@/lib/utils';
 import { calculateScore } from '@/lib/scoring';
 import { ITEMS } from '@/lib/market-data';
 import { searchLiveOpportunities } from '@/lib/pncp-data';
@@ -51,6 +51,10 @@ export default function DashboardPage() {
   const [numFavoritos, setNumFavoritos] = useState(0)
   const [numAlertas, setNumAlertas] = useState(0)
 
+  // Alertas novos — últimas entregas de alerta do usuário (Supabase).
+  const [alertasNovos, setAlertasNovos] = useState<Array<{ id: string; canal: string | null; status: string | null; obj: string | null; em: string | null }>>([])
+  const [alertasLoading, setAlertasLoading] = useState(true)
+
   // Editais abertos — mesma fonte viva de /oportunidades e /busca (PNCP),
   // com fallback para a base demonstrativa local quando a API está inacessível.
   const [liveOpps, setLiveOpps] = useState<Opportunity[] | null>(null)
@@ -85,6 +89,45 @@ export default function DashboardPage() {
     }
   }, [])
 
+  // Carrega as últimas entregas de alerta do usuário (best-effort).
+  useEffect(() => {
+    let cancelled = false
+    const supabase = createClient()
+    ;(async () => {
+      try {
+        const { data: auth } = await supabase.auth.getUser()
+        const userId = auth.user?.id
+        if (!userId) {
+          if (!cancelled) setAlertasLoading(false)
+          return
+        }
+        const { data } = await supabase
+          .from('alert_deliveries')
+          .select('id,canal,status,oportunidade_obj,data_envio,created_at')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(5)
+        if (cancelled) return
+        setAlertasNovos(
+          (data || []).map((r) => ({
+            id: String(r.id),
+            canal: r.canal ?? null,
+            status: r.status ?? null,
+            obj: r.oportunidade_obj ?? null,
+            em: r.data_envio || r.created_at || null,
+          }))
+        )
+      } catch {
+        /* alertas são opcionais */
+      } finally {
+        if (!cancelled) setAlertasLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   // Fonte local (fallback) — usada somente quando a API do PNCP não responde.
   const opps = useMemo<Opportunity[]>(() => ITEMS.map(itemToOpportunity), [])
   const localMetrics = useMemo(() => computeDashboardMetrics(ITEMS), [])
@@ -103,6 +146,15 @@ export default function DashboardPage() {
     () => baseOpps.map((o) => ({ ...o, score: calculateScore(o, profile).total })).sort((a, b) => b.score - a.score),
     [baseOpps, profile]
   )
+
+  // Próximos prazos: editais ainda abertos, ordenados pela data de encerramento.
+  const proximosPrazos = useMemo(() => {
+    const agora = Date.now()
+    return baseOpps
+      .filter((o) => o.dataEncerramento && new Date(o.dataEncerramento).getTime() >= agora)
+      .sort((a, b) => new Date(a.dataEncerramento).getTime() - new Date(b.dataEncerramento).getTime())
+      .slice(0, 5)
+  }, [baseOpps])
 
   // Editais abertos - mesma fonte viva de /oportunidades e /busca (PNCP),
   // com fallback para a base demonstrativa local quando a API esta inacessivel.
@@ -223,10 +275,12 @@ export default function DashboardPage() {
   ]
 
   const cardItems = [
-    { href: '/oportunidades', title: 'Encontrar oportunidades', icon: Search, desc: 'Explore oportunidades na base demonstrativa', color: 'bg-primary text-white shadow-primary/25', cta: 'Explorar' },
-    { href: '/precos', title: 'Analisar preços', icon: TrendingUp, desc: 'Preços históricos da base demonstrativa', color: 'bg-secondary text-white shadow-secondary/25', cta: 'Analisar' },
-    { href: '/meu-radar', title: 'Ativar radar', icon: Radar, desc: 'Monitore buscas salvas', color: 'bg-success text-white shadow-success/25', cta: 'Ativar' },
-    { href: '/montagem-processo', title: 'Monte seu processo', icon: FileText, desc: 'Organize sua contratação passo a passo e acompanhe as pendências da instrução', color: 'bg-gradient-to-br from-primary to-secondary text-white shadow-primary/25', cta: 'Começar' },
+    { href: '/oportunidades', title: 'Encontrar', icon: Search, desc: 'Editais abertos com filtros e score de oportunidade', color: 'bg-primary text-white shadow-primary/25', cta: 'Explorar' },
+    { href: '/analise-edital', title: 'Analisar', icon: FileSearch, desc: 'Análise de edital com IA: exigências, prazos e riscos', color: 'bg-gradient-to-br from-violet-500 to-secondary text-white shadow-secondary/25', cta: 'Analisar' },
+    { href: '/precos-inteligentes', title: 'Precificar', icon: TrendingUp, desc: 'Pesquisa, histórico e comparação de preços', color: 'bg-secondary text-white shadow-secondary/25', cta: 'Pesquisar' },
+    { href: '/montagem-processo', title: 'Montar processo', icon: FileText, desc: 'Instrução passo a passo e pendências', color: 'bg-gradient-to-br from-primary to-secondary text-white shadow-primary/25', cta: 'Montar' },
+    { href: '/meu-radar', title: 'Acompanhar', icon: Radar, desc: 'Radar, alertas, favoritos e prazos', color: 'bg-success text-white shadow-success/25', cta: 'Acompanhar' },
+    { href: '/concorrentes', title: 'Concorrentes', icon: Users, desc: 'Vencedores por órgão, item e região', color: 'bg-accent text-white shadow-accent/25', cta: 'Ver' },
   ]
 
   return (
@@ -255,6 +309,7 @@ export default function DashboardPage() {
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             placeholder="Buscar oportunidades por palavra-chave (objeto, órgão, município)..."
+            title="Busca por palavra-chave: procura no objeto, órgão e município dos editais."
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
           />
         </div>
@@ -314,6 +369,83 @@ export default function DashboardPage() {
         </div>
       </section>
 
+      {/* Próximos prazos + Alertas novos */}
+      <div className="grid md:grid-cols-2 gap-6">
+        <section className="card bg-white dark:bg-slate-900 dark:border-slate-800">
+          <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-primary" />
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Próximos prazos de encerramento</h2>
+          </div>
+          <div className="p-5">
+            {liveLoading ? (
+              <div className="space-y-3">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="h-10 rounded-lg bg-slate-100 dark:bg-slate-800 animate-pulse" />
+                ))}
+              </div>
+            ) : proximosPrazos.length === 0 ? (
+              <p className="text-sm text-slate-400">Nenhum prazo em aberto no momento. Ajuste a busca ou volte mais tarde.</p>
+            ) : (
+              <ul className="space-y-3">
+                {proximosPrazos.map((o) => {
+                  const dias = getDaysUntil(o.dataEncerramento)
+                  return (
+                    <li key={o.id}>
+                      <Link href={`/oportunidades/${o.id}`} className="block group">
+                        <p className="text-sm font-medium text-slate-800 dark:text-slate-100 line-clamp-1 group-hover:text-primary transition-colors">{o.objeto}</p>
+                        <div className="flex items-center gap-2 mt-1 text-xs">
+                          <span className={`inline-flex items-center gap-1 font-semibold ${getDeadlineColor(dias)}`}>
+                            <Clock className="w-3 h-3" /> {formatDate(o.dataEncerramento)}
+                            {typeof dias === 'number' && dias >= 0 && <span>· {dias}d</span>}
+                          </span>
+                          <span className="text-slate-400 truncate">{o.orgao}</span>
+                        </div>
+                      </Link>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
+        </section>
+
+        <section className="card bg-white dark:bg-slate-900 dark:border-slate-800">
+          <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Alertas novos</h2>
+            </div>
+            <Link href="/alertas" className="text-xs font-semibold text-primary hover:underline">Ver todos</Link>
+          </div>
+          <div className="p-5">
+            {alertasLoading ? (
+              <div className="space-y-3">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="h-10 rounded-lg bg-slate-100 dark:bg-slate-800 animate-pulse" />
+                ))}
+              </div>
+            ) : alertasNovos.length === 0 ? (
+              <p className="text-sm text-slate-400">
+                Nenhum alerta novo. Configure alertas em{' '}
+                <Link href="/alertas" className="text-primary hover:underline">Alertas</Link> para ser avisado.
+              </p>
+            ) : (
+              <ul className="space-y-3">
+                {alertasNovos.map((a) => (
+                  <li key={a.id} className="flex items-start gap-2">
+                    <CheckCircle2 className={cn('w-4 h-4 mt-0.5 shrink-0', a.status === 'enviado' ? 'text-emerald-500' : a.status === 'falhou' ? 'text-rose-500' : 'text-slate-400')} />
+                    <div className="min-w-0">
+                      <p className="text-sm text-slate-800 dark:text-slate-100 line-clamp-1">{a.obj || 'Alerta'}</p>
+                      <p className="text-xs text-slate-400">{[a.canal, a.status, a.em ? formatDate(a.em) : null].filter(Boolean).join(' · ')}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {cards.map((c) => (
           <StatCard
@@ -328,7 +460,12 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div>
+        <div className="mb-4">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Atalhos rápidos</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Ações essenciais da sua jornada de licitações.</p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {cardItems.map((card) => {
           const Icon = card.icon
           return (
@@ -345,6 +482,7 @@ export default function DashboardPage() {
             </Link>
           )
         })}
+        </div>
       </div>
 
       <div className="card">
