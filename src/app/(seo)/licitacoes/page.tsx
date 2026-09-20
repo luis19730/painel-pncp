@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Section, SectionHead } from '@/components/marketing/section'
+import { fetchSeoLicitacoes } from '@/lib/seo-data'
 
 export const metadata: Metadata = {
   title: 'Licitações no Brasil',
@@ -23,22 +24,11 @@ interface LicitacaoItem {
   orgaoNome: string
 }
 
-interface SearchResponse {
-  items?: LicitacaoItem[]
-  data?: LicitacaoItem[]
-  total?: number
-}
-
 async function fetchLicitacoes(): Promise<LicitacaoItem[]> {
-  try {
-    const base = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
-    const res = await fetch(`${base}/api/pncp/mapa?modalidade=todos`, { next: { revalidate: 120 } })
-    if (!res.ok) return []
-    const data: SearchResponse = await res.json()
-    return data.items ?? data.data ?? []
-  } catch {
-    return []
-  }
+  // Usa a MESMA fonte resiliente das demais páginas SEO (PNCP direto + fallback
+  // local). Antes dependia de NEXT_PUBLIC_BASE_URL, que caía em localhost e
+  // deixava a página VAZIA em produção.
+  return (await fetchSeoLicitacoes({ q: 'licitacao' })) as unknown as LicitacaoItem[]
 }
 
 function formatDate(dateStr: string): string {

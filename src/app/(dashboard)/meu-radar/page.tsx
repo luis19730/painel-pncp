@@ -365,14 +365,19 @@ export default function MeuRadarPage() {
       )}
 
       {radars.length === 0 && !showForm ? (
-        <EmptyState
-          icon={<Radar className="w-8 h-8" />}
-          title="Nenhuma busca no radar"
-          description="Crie buscas com palavra-chave, UF, modalidade, municípios e faixa de valor para monitorar contratações reais do PNCP compatíveis com a sua empresa."
-          action="Criar primeira busca"
-          actionHref="#"
-          className="border border-dashed border-neutral-200 dark:border-slate-800 bg-white dark:bg-slate-900"
-        />
+        <div className="space-y-4">
+          <EmptyState
+            icon={<Radar className="w-8 h-8" />}
+            title="Nenhuma busca no radar"
+            description="Crie buscas com palavra-chave, UF, modalidade, municípios e faixa de valor para monitorar contratações reais do PNCP compatíveis com a sua empresa."
+            className="border border-dashed border-neutral-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+          />
+          <div className="text-center">
+            <Button type="button" variant="primary" onClick={() => setShowForm(true)}>
+              Criar primeira busca
+            </Button>
+          </div>
+        </div>
       ) : (
         <div className="space-y-2">
           {radars.map((r) => {

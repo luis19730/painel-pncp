@@ -60,6 +60,7 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith('/montagem-processo') ||
     pathname.startsWith('/meus-processos') ||
     pathname.startsWith('/sinapi') ||
+    pathname.startsWith('/credenciamento-sicx') ||
     pathname.startsWith('/ajuda') ||
     pathname.startsWith('/checkout') ||
     pathname.startsWith('/minha-assinatura')
