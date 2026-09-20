@@ -65,7 +65,7 @@ export default function CadastroForm() {
       const res = await fetch('/api/auth/cadastro', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, confirmPassword }),
+        body: JSON.stringify({ name, email, password, confirmPassword, perfil: tipoPerfil, segmento, ufs }),
       })
       const data = await res.json().catch(() => null)
 

@@ -42,6 +42,10 @@ export async function POST(req: Request) {
   const email = String(body.email ?? '').trim().toLowerCase()
   const password = String(body.password ?? '')
   const confirmPassword = String(body.confirmPassword ?? '')
+  // Perfil inicial (opcional) — usado para personalizar alertas/score.
+  const perfilTipo = String(body.perfil ?? '').trim()
+  const perfilSegmento = String(body.segmento ?? '').trim()
+  const perfilUfs = String(body.ufs ?? '').trim()
 
   const fail = (erro: string, status: number, extra: Record<string, unknown> = {}) =>
     NextResponse.json({ ok: false, erro, ...extra }, { status })
@@ -98,6 +102,24 @@ export async function POST(req: Request) {
     userId = data.user.id
   } catch {
     return fail('Não foi possível criar a conta. Tente novamente.', 500, { tentarReenviar: true })
+  }
+
+  // Perfil inicial (opcional) persistido no user_metadata do usuário.
+  // Não-crítico: falha aqui não derruba o cadastro (o cliente também guarda
+  // uma cópia local para personalizar alertas/score).
+  try {
+    const segmentos = perfilSegmento ? perfilSegmento.split(',').map((s) => s.trim()).filter(Boolean) : []
+    const estados = perfilUfs ? perfilUfs.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean) : []
+    await admin.auth.admin.updateUserById(userId, {
+      user_metadata: {
+        name,
+        perfil: perfilTipo || 'fornecedor',
+        segmentos,
+        estados,
+      },
+    })
+  } catch {
+    console.error('[cadastro] falha ao salvar perfil inicial para', userId)
   }
 
   // Plano inicial: free + trial de 15 dias. Falha aqui NÃO derruba o cadastro
