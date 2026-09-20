@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/alerts/db'
+import { autorizarCron } from '@/lib/cron/auth'
 import { listAllUsers } from '@/lib/supabase/admin'
 import { listPlanos } from '@/lib/planos/db'
 import { computePlanoInfo } from '@/lib/planos/plano'
@@ -43,15 +44,8 @@ function diasAte(fimIso: string, agora: Date): number {
  * marco em `props.mark`; se já existir (user+mark), não reenvia.
  */
 export async function GET(req: Request) {
-  const expected = process.env.CRON_SECRET
-  if (!expected || expected.includes('placeholder')) {
-    return NextResponse.json({ ok: false, erro: 'CRON_SECRET não configurado.' }, { status: 503 })
-  }
-  const url = new URL(req.url)
-  const token = req.headers.get('x-cron-secret') || url.searchParams.get('token') || ''
-  if (token !== expected) {
-    return NextResponse.json({ ok: false, erro: 'Não autorizado.' }, { status: 401 })
-  }
+  const auth = autorizarCron(req)
+  if (!auth.ok) return auth.response
 
   let client
   try {

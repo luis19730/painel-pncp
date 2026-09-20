@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/alerts/db'
+import { autorizarCron } from '@/lib/cron/auth'
 import { siteBaseUrl } from '@/lib/auth/site-url'
 import { enviarLoteContatos } from '@/lib/contatos/outreach'
 
@@ -16,15 +17,8 @@ export const dynamic = 'force-dynamic'
  * `dry=1` simula sem enviar nem gravar.
  */
 export async function GET(req: Request) {
-  const expected = process.env.CRON_SECRET
-  if (!expected || expected.includes('placeholder')) {
-    return NextResponse.json({ ok: false, erro: 'CRON_SECRET não configurado.' }, { status: 503 })
-  }
-  const url = new URL(req.url)
-  const token = req.headers.get('x-cron-secret') || url.searchParams.get('token') || ''
-  if (token !== expected) {
-    return NextResponse.json({ ok: false, erro: 'Não autorizado.' }, { status: 401 })
-  }
+  const auth = autorizarCron(req)
+  if (!auth.ok) return auth.response
 
   let client
   try {
@@ -33,6 +27,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, erro: 'SUPABASE_SERVICE_ROLE_KEY não configurada.' }, { status: 503 })
   }
 
+  const url = new URL(req.url)
   const limite = Number(url.searchParams.get('limite') || process.env.OUTREACH_LOTE || 20) || 20
   const dryRun = url.searchParams.get('dry') === '1'
   const resultado = await enviarLoteContatos(client, limite, { siteUrl: siteBaseUrl(req), dryRun })

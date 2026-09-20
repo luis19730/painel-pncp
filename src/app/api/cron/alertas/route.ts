@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { runImmediate, runScheduledBatch } from '@/lib/alerts/processor'
 import { isConfigured } from '@/lib/alerts/is-configured'
+import { autorizarCron } from '@/lib/cron/auth'
 
 /**
  * GET /api/cron/alertas
@@ -18,19 +19,8 @@ import { isConfigured } from '@/lib/alerts/is-configured'
  * isso é o processor + isConfigured).
  */
 export async function GET(req: Request) {
-  const expected = process.env.CRON_SECRET
-  if (!expected || expected.includes('placeholder')) {
-    return NextResponse.json(
-      { ok: false, erro: 'CRON_SECRET não configurado.' },
-      { status: 503 }
-    )
-  }
-
-  const url = new URL(req.url)
-  const token = req.headers.get('x-cron-secret') || url.searchParams.get('token') || ''
-  if (token !== expected) {
-    return NextResponse.json({ ok: false, erro: 'Não autorizado.' }, { status: 401 })
-  }
+  const auth = autorizarCron(req)
+  if (!auth.ok) return auth.response
 
   if (!isConfigured()) {
     return NextResponse.json(
