@@ -12,6 +12,7 @@ import type { PriceStats } from '@/lib/market-data'
 import type { Opportunity } from '@/types'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import ConsultaRapida from '@/components/marketing/consulta-rapida'
+import { SICX } from '@/content/sicx'
 
 export default function HomeContent() {
   const [opps, setOpps] = useState<Opportunity[] | null>(null)
@@ -174,6 +175,45 @@ export default function HomeContent() {
 
       {/* Consulta rápida (integr. landing) — busca real no PNCP */}
       <ConsultaRapida />
+
+      {/* SICX — bloco resumido (conteúdo em src/content/sicx.ts) */}
+      <section className="py-16 md:py-20">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 p-8 md:p-10">
+            <div className="grid lg:grid-cols-[1.5fr_1fr] gap-8 items-center">
+              <div>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider mb-3">
+                  <Zap className="w-3.5 h-3.5" /> {SICX.eyebrow}
+                </span>
+                <h2 className="text-2xl md:text-3xl font-extrabold font-display text-slate-900 dark:text-white mb-3">
+                  {SICX.nome}
+                </h2>
+                <p className="text-slate-600 dark:text-slate-300 leading-relaxed mb-4">{SICX.resumo}</p>
+                <ul className="space-y-2 mb-6">
+                  {SICX.destaques.map((d) => (
+                    <li key={d} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300">
+                      <Check className="w-4 h-4 text-success mt-0.5 shrink-0" /> {d}
+                    </li>
+                  ))}
+                </ul>
+                <Link href="/sicx">
+                  <button className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-white shadow-lg shadow-primary/25 hover:bg-primary-hover transition-all">
+                    Entender o SICX <ArrowRight className="w-4 h-4" />
+                  </button>
+                </Link>
+              </div>
+              <div className="grid grid-cols-1 gap-3">
+                {SICX.passos.slice(0, 3).map((p) => (
+                  <div key={p.titulo} className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{p.titulo}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">{p.detalhe}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* NOVO RECURSO — Pesquisa de Preços Inteligente (banner comercial) */}
       <section className="relative overflow-hidden bg-gradient-to-r from-primary via-secondary to-accent">

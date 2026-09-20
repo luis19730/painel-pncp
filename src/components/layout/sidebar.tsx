@@ -11,6 +11,7 @@ import {
   Star, FileBarChart, Calendar,
   Building2, Settings, HelpCircle, Type, Zap, Home
 } from 'lucide-react'
+import { SICX } from '@/content/sicx'
 
 // ============================================================================
 // Navegação organizada pela JORNADA de quem trabalha com licitações:
@@ -27,7 +28,7 @@ const navGroups = [
       { href: '/oportunidades', label: 'Editais abertos', icon: Search },
       { href: '/busca', label: 'Busca avançada', icon: Search },
       { href: '/modalidades', label: 'Modalidades', icon: Layers },
-      { href: '/credenciamento-sicx', label: 'Credenciamento (SICX)', icon: Zap },
+      { href: '/credenciamento-sicx', label: 'SICX / Compras Expressas', icon: Zap, title: SICX.resumo },
       { href: '/score', label: 'Score de oportunidade', icon: Gauge },
     ],
   },
@@ -120,7 +121,7 @@ function NavSection({
   pathname,
 }: {
   title?: string
-  items: { href: string; label: string; icon: React.ComponentType<{ className?: string }>; premium?: boolean; external?: boolean }[]
+  items: { href: string; label: string; icon: React.ComponentType<{ className?: string }>; premium?: boolean; external?: boolean; title?: string }[]
   pathname: string
 }) {
   return (
@@ -140,6 +141,7 @@ function NavSection({
               href={item.href}
               target={item.external ? '_blank' : undefined}
               rel={item.external ? 'noopener noreferrer' : undefined}
+              title={item.title}
               className={cn(
                 'group flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-150',
                 active

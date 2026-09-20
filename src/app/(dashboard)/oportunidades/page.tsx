@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Search, Filter, ArrowUpDown, AlertCircle, MapPin } from 'lucide-react';
+import { Search, Filter, ArrowUpDown, AlertCircle, MapPin, Zap } from 'lucide-react';
 import OpportunityCard from '@/components/opportunities/opportunity-card';
 import PageHeader from '@/components/ui/page-header';
 import DataSourceNotice, { type DataSource } from '@/components/ui/data-source-notice';
@@ -10,7 +10,7 @@ import { CardSkeleton } from '@/components/ui/skeleton';
 import { searchItems } from '@/lib/market-data';
 import { searchLiveOpportunities } from '@/lib/pncp-data';
 import { calculateScore, scoreOpportunities } from '@/lib/scoring';
-import { getOpportunityStatus } from '@/lib/utils';
+import { getOpportunityStatus, cn } from '@/lib/utils';
 import { itemToOpportunity } from '@/lib/opportunity';
 import { UFS_BRASIL } from '@/data/municipios';
 import { MODALIDADES_PNCP } from '@/lib/calendario/modalidades';
@@ -114,6 +114,8 @@ export default function OportunidadesPage() {
     next.keyword = kw;
     next.uf = params.get('uf') || '';
     next.modalidade = params.get('modalidade') || '';
+    // Filtro dedicado do SICX / Compras Expressas (credenciamento por comércio eletrônico).
+    if (params.get('sicx') === '1' && !next.modalidade) next.modalidade = 'Credenciamento';
     next.municipio = params.get('municipio') || '';
     next.orgao = params.get('orgao') || '';
     const sit = params.get('situacao') || params.get('status') || '';
@@ -263,6 +265,19 @@ export default function OportunidadesPage() {
             <option key={m} value={m}>{m}</option>
           ))}
         </select>
+        <button
+          type="button"
+          onClick={() => setFilter('modalidade', filters.modalidade === 'Credenciamento' ? '' : 'Credenciamento')}
+          title="SICX / Compras Expressas: mostra os processos de credenciamento por comércio eletrônico (Lei nº 15.266/2025 / Decreto nº 13.106/2026)."
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-semibold transition-colors',
+            filters.modalidade === 'Credenciamento'
+              ? 'border-primary bg-primary/10 text-primary'
+              : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+          )}
+        >
+          <Zap className="w-3.5 h-3.5" /> SICX / Compras Expressas
+        </button>
         <input
           type="text"
           value={filters.municipio}

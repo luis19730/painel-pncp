@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { Zap } from 'lucide-react'
 import CadastroForm from '@/components/auth/cadastro-form'
+import { SICX } from '@/content/sicx'
 
 export const metadata: Metadata = {
   title: 'Criar conta — Pesquisa de Preços Inteligente',
@@ -57,6 +59,25 @@ export default function CadastroPage() {
             </li>
           ))}
         </ul>
+      </div>
+
+      {/* Bloco resumido do SICX (conteúdo em src/content/sicx.ts) */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-700 p-6">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider mb-3">
+          <Zap className="w-3.5 h-3.5" /> Compras Expressas (SICX)
+        </div>
+        <h2 className="text-lg font-extrabold font-display text-slate-900 dark:text-white mb-2">{SICX.nome}</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-3">{SICX.resumo}</p>
+        <ul className="space-y-1.5 mb-3">
+          {SICX.destaques.slice(0, 3).map((d) => (
+            <li key={d} className="text-xs text-slate-500 dark:text-slate-400 flex items-start gap-2">
+              <span className="text-primary mt-0.5">•</span> {d}
+            </li>
+          ))}
+        </ul>
+        <Link href="/sicx" className="text-sm font-semibold text-primary hover:underline">
+          Saber mais sobre o SICX →
+        </Link>
       </div>
 
       {/* Formulário (funcionalidade inalterada) */}
