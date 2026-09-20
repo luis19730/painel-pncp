@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, ChevronDown, Mail, BookOpen, CircleHelp } from 'lucide-react';
+import Link from 'next/link';
+import { Search, ChevronDown, Mail, BookOpen, CircleHelp, GraduationCap, ArrowRight, FileText } from 'lucide-react';
 import PageHeader from '@/components/ui/page-header';
 import Input from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { GUIAS, GUIA_AVISO, GUIA_ATUALIZADO_EM_LABEL } from '@/content/guias';
 
 const FAQS = [
   {
@@ -34,7 +36,7 @@ const FAQS = [
 ];
 
 const CATEGORIAS = [
-  { icon: BookOpen, titulo: 'Como começar', desc: 'Primeiros passos, cadastro de perfil e navegação', link: '/dashboard#como-comecar' },
+  { icon: BookOpen, titulo: 'Como começar', desc: 'Primeiros passos, cadastro de perfil e navegação', link: '/dashboard' },
   { icon: CircleHelp, titulo: 'Usando o score', desc: 'Entenda o cálculo e como melhorar suas notas', link: '/score' },
   { icon: Mail, titulo: 'Alertas e Radar', desc: 'Monitore novas licitações automaticamente', link: '/meu-radar' },
 ];
@@ -43,17 +45,19 @@ export default function AjudaPage() {
   const [query, setQuery] = useState('');
   const [aberta, setAberta] = useState<number | null>(0);
 
-  const filtered = FAQS.filter((f) =>
-    !query ||
-    f.q.toLowerCase().includes(query.toLowerCase()) ||
-    f.a.toLowerCase().includes(query.toLowerCase())
+  const q = query.trim().toLowerCase();
+  const guiasFiltrados = GUIAS.filter(
+    (g) => !q || g.titulo.toLowerCase().includes(q) || g.resumo.toLowerCase().includes(q)
+  );
+  const filtered = FAQS.filter(
+    (f) => !q || f.q.toLowerCase().includes(q) || f.a.toLowerCase().includes(q)
   );
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Central de Ajuda"
-        description="Tire suas dúvidas sobre o uso da plataforma"
+        description="Guias práticos de licitação e respostas sobre o uso da plataforma"
       />
 
       <div className="relative">
@@ -61,14 +65,51 @@ export default function AjudaPage() {
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar por uma dúvida..."
+          placeholder="Buscar um guia ou dúvida (ex.: habilitação, preço, edital, ME/EPP)..."
           className="pl-11 py-3"
         />
       </div>
 
+      {/* Guias práticos */}
+      <div className="card bg-white dark:bg-slate-900 dark:border-slate-800 p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <GraduationCap className="w-5 h-5 text-primary" />
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Guias práticos de licitação</h2>
+        </div>
+
+        {guiasFiltrados.length === 0 ? (
+          <p className="text-sm text-slate-400">Nenhum guia encontrado para "{query}".</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {guiasFiltrados.map((g) => (
+              <Link
+                key={g.slug}
+                href={`/ajuda/${g.slug}`}
+                title={g.resumo}
+                className="group rounded-xl border border-slate-200 dark:border-slate-800 p-4 hover:border-primary/40 hover:shadow-md transition-all"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-primary/10 dark:bg-primary/15 flex items-center justify-center text-primary shrink-0">
+                    <FileText className="w-[18px] h-[18px]" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-primary transition-colors">{g.titulo}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{g.resumo}</p>
+                  </div>
+                </div>
+                <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary">
+                  Abrir guia <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Atalhos por categoria */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {CATEGORIAS.map((c) => (
-          <a
+          <Link
             key={c.titulo}
             href={c.link}
             className="card bg-white dark:bg-slate-900 dark:border-slate-800 p-5 hover:border-primary transition-colors group"
@@ -78,10 +119,11 @@ export default function AjudaPage() {
             </div>
             <p className="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-primary transition-colors">{c.titulo}</p>
             <p className="text-xs text-slate-400 mt-1">{c.desc}</p>
-          </a>
+          </Link>
         ))}
       </div>
 
+      {/* FAQ */}
       <div className="card bg-white dark:bg-slate-900 dark:border-slate-800 p-6">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Perguntas frequentes</h2>
         {filtered.length === 0 ? (
@@ -106,6 +148,7 @@ export default function AjudaPage() {
         )}
       </div>
 
+      {/* Contato */}
       <div className="card bg-white dark:bg-slate-900 dark:border-slate-800 p-6 flex items-start gap-3">
         <Mail className="w-5 h-5 text-primary mt-0.5 shrink-0" />
         <div>
@@ -121,6 +164,12 @@ export default function AjudaPage() {
             painelpncp@gmail.com
           </a>
         </div>
+      </div>
+
+      {/* Aviso */}
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 p-5">
+        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{GUIA_AVISO}</p>
+        <p className="text-[11px] text-slate-400 mt-2">Última atualização: {GUIA_ATUALIZADO_EM_LABEL}.</p>
       </div>
     </div>
   );
