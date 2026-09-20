@@ -25,12 +25,22 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      - name: Validar secrets
+        env:
+          PNCP_BASE_URL: ${{ secrets.PNCP_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "${PNCP_BASE_URL}" ] || [ -z "${CRON_SECRET}" ]; then
+            echo "::error::Configure os secrets PNCP_BASE_URL e CRON_SECRET em Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
       - name: Disparar extração de contatos
         env:
           PNCP_BASE_URL: ${{ secrets.PNCP_BASE_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           LIMITE: ${{ github.event.inputs.limite || '8' }}
         run: |
-          curl -fsS --fail-with-body --max-time 300 \
+          curl -fsS --fail-with-body --retry 3 --retry-delay 5 --max-time 300 \
             -H "x-cron-secret: ${CRON_SECRET}" \
             "${PNCP_BASE_URL}/api/cron/extrair-contatos?limite=${LIMITE}"
