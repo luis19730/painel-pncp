@@ -1,12 +1,12 @@
-name: Contatos — extração em lote
+﻿name: Contatos â€” extraÃ§Ã£o em lote
 
 # Dispara o endpoint /api/cron/extrair-contatos, que baixa o PDF de cada edital
 # ativo do PNCP, extrai o texto e grava os e-mails de contato (deduplicados por
-# órgão+e-mail). Processa poucos editais por execução (default 8) com pausa
-# entre downloads (rate limiting). Idempotente: editais já processados são
+# Ã³rgÃ£o+e-mail). Processa poucos editais por execuÃ§Ã£o (default 8) com pausa
+# entre downloads (rate limiting). Idempotente: editais jÃ¡ processados sÃ£o
 # pulados. Roda a cada 6h para cobrir a base ao longo do dia.
 #
-# Secrets necessários (Settings > Secrets and variables > Actions):
+# Secrets necessÃ¡rios (Settings > Secrets and variables > Actions):
 #   - PNCP_BASE_URL : https://www.painelpncp.com.br
 #   - CRON_SECRET   : mesmo valor do secret CRON_SECRET configurado no worker
 
@@ -35,12 +35,12 @@ jobs:
             exit 1
           fi
 
-      - name: Disparar extração de contatos
+      - name: Disparar extraÃ§Ã£o de contatos
         env:
           PNCP_BASE_URL: ${{ secrets.PNCP_BASE_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           LIMITE: ${{ github.event.inputs.limite || '8' }}
         run: |
-          curl -fsS --fail-with-body --retry 3 --retry-delay 5 --max-time 300 \
+          curl -sS --fail-with-body --retry 3 --retry-delay 5 --max-time 300 \
             -H "x-cron-secret: ${CRON_SECRET}" \
             "${PNCP_BASE_URL}/api/cron/extrair-contatos?limite=${LIMITE}"

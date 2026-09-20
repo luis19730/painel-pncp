@@ -1,12 +1,12 @@
-name: Trial — sequência de lembretes
+﻿name: Trial â€” sequÃªncia de lembretes
 
 # Dispara o endpoint /api/cron/trial-expirando, que envia os lembretes de trial
 # nos marcos 7, 6, 4, 3, 2, 1 (antes de expirar) e -2, -3, -6 (depois), para
-# quem está em trial e ainda NÃO confirmou assinatura ativa. Cada marco é
-# enviado uma única vez por usuário (idempotência via evento trial_reminder em
-# analytics_events), então rodar mais de uma vez por dia é seguro.
+# quem estÃ¡ em trial e ainda NÃƒO confirmou assinatura ativa. Cada marco Ã©
+# enviado uma Ãºnica vez por usuÃ¡rio (idempotÃªncia via evento trial_reminder em
+# analytics_events), entÃ£o rodar mais de uma vez por dia Ã© seguro.
 #
-# Secrets necessários (Settings > Secrets and variables > Actions):
+# Secrets necessÃ¡rios (Settings > Secrets and variables > Actions):
 #   - PNCP_BASE_URL : https://www.painelpncp.com.br
 #   - CRON_SECRET   : mesmo valor do secret CRON_SECRET configurado no worker
 
@@ -36,6 +36,6 @@ jobs:
           PNCP_BASE_URL: ${{ secrets.PNCP_BASE_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          curl -fsS --fail-with-body --retry 3 --retry-delay 5 --max-time 120 \
+          curl -sS --fail-with-body --retry 3 --retry-delay 5 --max-time 120 \
             -H "x-cron-secret: ${CRON_SECRET}" \
             "${PNCP_BASE_URL}/api/cron/trial-expirando"
