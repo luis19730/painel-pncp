@@ -14,6 +14,25 @@ import { formatCurrency, formatDate } from '@/lib/utils'
 import ConsultaRapida from '@/components/marketing/consulta-rapida'
 import { SICX } from '@/content/sicx'
 
+// Funções principais da home. "previa" é um rótulo do mock visual; para usar
+// prints reais, substitua o bloco de prévia por uma <Image> da tela.
+const RECURSOS = [
+  { icon: Search, titulo: 'Busca avançada', desc: 'Filtre editais por UF, município, órgão, modalidade, palavra-chave e faixa de valor.', previa: 'Lista de editais com filtros e score' },
+  { icon: TrendingUp, titulo: 'Pesquisa de preços', desc: 'Consulte referências e histórico de preços praticados em contratações públicas.', previa: 'Tabela de preços e faixa de referência' },
+  { icon: Sparkles, titulo: 'Análise de edital com IA', desc: 'Resumo de objeto, exigências, prazos, riscos e documentos necessários.', previa: 'Resumo do edital gerado por IA' },
+  { icon: Bell, titulo: 'Alertas', desc: 'Receba avisos de novas oportunidades compatíveis com o seu perfil.', previa: 'Alertas novos e entregas' },
+  { icon: FileBarChart, titulo: 'Relatórios de concorrentes', desc: 'Acompanhe vencedores por órgão, item e região.', previa: 'Relatório de concorrentes e vencedores' },
+]
+
+function Counter({ value, label }: { value: string; label: string }) {
+  return (
+    <div>
+      <p className="text-3xl md:text-4xl font-extrabold font-display text-primary">{value}</p>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{label}</p>
+    </div>
+  )
+}
+
 export default function HomeContent() {
   const [opps, setOpps] = useState<Opportunity[] | null>(null)
   const [priceStats, setPriceStats] = useState<PriceStats | null>(null)
@@ -82,8 +101,8 @@ export default function HomeContent() {
                 no PNCP
               </h1>
               <p className="text-lg md:text-xl text-slate-600 dark:text-slate-300 max-w-xl mx-auto lg:mx-0 mb-8">
-                Monitore licitações, analise preços, acompanhe concorrentes e descubra as oportunidades
-                mais relevantes para sua empresa.
+                <strong className="text-slate-900 dark:text-white">Encontre, analise e dispute licitações com mais segurança.</strong>{' '}
+                Monitore o PNCP, analise preços, acompanhe concorrentes e descubra as oportunidades mais relevantes para a sua empresa.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
                 <Link href="/cadastro">
@@ -170,6 +189,60 @@ export default function HomeContent() {
               </p>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Contadores reais (PNCP) */}
+      <section className="border-y border-slate-100 dark:border-slate-800 bg-white dark:bg-[#0b1120]">
+        <div className="max-w-7xl mx-auto px-4 py-10 grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
+          <Counter value={loading ? '—' : String(opps?.length ?? 0)} label="Editais abertos monitorados" />
+          <Counter value={loading ? '—' : String(orgaosDistintos)} label="Órgãos cobertos" />
+          <Counter value={loading ? '—' : String(ufs.length)} label="UFs cobertas" />
+        </div>
+      </section>
+
+      {/* Funções principais (com prévias) */}
+      <section id="recursos" className="py-20 md:py-24">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="max-w-2xl mb-10">
+            <p className="text-sm font-bold text-primary uppercase tracking-wider mb-3">Funções principais</p>
+            <h2 className="text-3xl md:text-4xl font-extrabold font-display text-slate-900 dark:text-white mb-3">
+              Tudo para encontrar, analisar e disputar
+            </h2>
+            <p className="text-slate-500 dark:text-slate-300">
+              Ferramentas reais, alimentadas por dados públicos do PNCP.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {RECURSOS.map(({ icon: Icon, titulo, desc, previa }) => (
+              <div key={titulo} className="card overflow-hidden">
+                {/* Prévia visual (substitua por screenshot real quando houver) */}
+                <div className="h-36 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 border-b border-slate-100 dark:border-slate-800 p-4">
+                  <div className="rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 h-full p-3">
+                    <div className="flex gap-1.5 mb-2">
+                      <span className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600" />
+                      <span className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600" />
+                      <span className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600" />
+                    </div>
+                    <div className="h-2.5 w-3/4 rounded bg-slate-200 dark:bg-slate-700 mb-2" />
+                    <div className="h-2 w-1/2 rounded bg-slate-200 dark:bg-slate-700 mb-2" />
+                    <div className="h-2 w-2/3 rounded bg-slate-100 dark:bg-slate-800" />
+                    <p className="mt-2 text-[10px] text-slate-400">{previa}</p>
+                  </div>
+                </div>
+                <div className="p-5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-9 h-9 rounded-lg bg-primary/10 dark:bg-primary/15 flex items-center justify-center text-primary">
+                      <Icon className="w-[18px] h-[18px]" />
+                    </div>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">{titulo}</h3>
+                  </div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="mt-4 text-xs text-slate-400">Prévias ilustrativas das telas da plataforma.</p>
         </div>
       </section>
 

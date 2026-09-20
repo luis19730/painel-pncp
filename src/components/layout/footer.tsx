@@ -38,8 +38,10 @@ export default function Footer() {
             <h4 className="font-semibold text-white text-sm mb-3">Institucional</h4>
             <div className="space-y-2">
               <FooterLink href="/sobre">Sobre</FooterLink>
+              <FooterLink href="/ajuda">Central de Ajuda</FooterLink>
               <FooterLink href="/termos">Termos de Uso</FooterLink>
-              <FooterLink href="/privacidade">Privacidade</FooterLink>
+              <FooterLink href="/privacidade">Privacidade (LGPD)</FooterLink>
+              <FooterLink href="mailto:painelpncp@gmail.com">Contato</FooterLink>
             </div>
           </div>
         </div>
@@ -50,8 +52,16 @@ export default function Footer() {
               O Painel PNCP é uma plataforma independente de consulta e análise de dados públicos.
               Não possui vínculo institucional com o Portal Nacional de Contratações Públicas ou com órgãos do Governo Federal.
               Os dados apresentados são provenientes do PNCP e estão sujeitos às informações disponibilizadas pelos órgãos responsáveis.
+              Tratamos dados pessoais conforme a LGPD (Lei nº 13.709/2018) — veja a Política de Privacidade.
             </p>
-            <p className="text-xs text-slate-600 shrink-0">Dados públicos do PNCP</p>
+            <a
+              href="https://pncp.gov.br"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-slate-400 hover:text-white transition-colors shrink-0"
+            >
+              Fonte dos dados: PNCP ↗
+            </a>
           </div>
         </div>
       </div>

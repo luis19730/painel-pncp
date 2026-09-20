@@ -80,6 +80,24 @@ export default function CadastroPage() {
         </Link>
       </div>
 
+      {/* Onboarding em 3 passos */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-700 p-6">
+        <h2 className="text-lg font-extrabold font-display text-slate-900 dark:text-white mb-4">Comece em 3 passos</h2>
+        <ol className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[
+            { n: '1', t: 'Crie sua conta', d: 'Cadastro simples e gratuito.' },
+            { n: '2', t: 'Complete seu perfil', d: 'Perfil, segmento/CNAE e UFs de interesse.' },
+            { n: '3', t: 'Receba oportunidades', d: 'Alertas e score personalizados automaticamente.' },
+          ].map((s) => (
+            <li key={s.n} className="rounded-xl border border-slate-200 dark:border-slate-800 p-4">
+              <span className="inline-flex w-7 h-7 rounded-full bg-primary text-white text-sm font-bold items-center justify-center mb-2">{s.n}</span>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">{s.t}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{s.d}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+
       {/* Formulário (funcionalidade inalterada) */}
       <CadastroForm />
 

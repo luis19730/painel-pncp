@@ -21,5 +21,27 @@ export const metadata: Metadata = {
 }
 
 export default function MarketingPage() {
-  return <HomeContent />
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      { '@type': 'Organization', name: 'Painel PNCP', url: 'https://www.painelpncp.com.br' },
+      { '@type': 'WebSite', name: 'Painel PNCP', url: 'https://www.painelpncp.com.br', inLanguage: 'pt-BR' },
+      {
+        '@type': 'SoftwareApplication',
+        name: 'Painel PNCP',
+        applicationCategory: 'BusinessApplication',
+        operatingSystem: 'Web',
+        description:
+          'Consulta de licitações do PNCP, análise de edital com IA, pesquisa de preços e apoio à montagem de processos licitatórios.',
+        offers: { '@type': 'Offer', price: '0', priceCurrency: 'BRL' },
+      },
+    ],
+  }
+
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <HomeContent />
+    </>
+  )
 }

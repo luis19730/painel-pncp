@@ -131,6 +131,32 @@ export async function POST(req: Request) {
     console.error('[cadastro] falha ao notificar admin do novo cadastro', email)
   }
 
+  // E-mail de boas-vindas (não-crítico).
+  try {
+    await sendEmail({
+      to: email,
+      subject: 'Bem-vindo(a) ao Painel PNCP',
+      html: `
+        <div style="font-family:Inter,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1f2937">
+          <h2 style="color:#1f3a4d;margin:0 0 12px">Bem-vindo(a) ao Painel PNCP</h2>
+          <p>Olá, ${name}!</p>
+          <p>Sua conta foi criada. Confirme seu e-mail para ativar o acesso e já aproveitar:</p>
+          <ul>
+            <li>Busca de editais do PNCP</li>
+            <li>Análise de edital com IA</li>
+            <li>Pesquisa de preços</li>
+            <li>Alertas personalizados</li>
+            <li>Oportunidades do SICX (Compras Expressas)</li>
+          </ul>
+          <p>Depois de confirmar, complete seu perfil (segmento/CNAE e UFs) para receber alertas personalizados.</p>
+          <p style="color:#9ca3af;font-size:12px">Plataforma independente de consulta a dados públicos, sem vínculo com órgãos do Governo Federal.</p>
+        </div>`,
+      text: `Bem-vindo(a) ao Painel PNCP, ${name}! Confirme seu e-mail para ativar a conta e complete seu perfil (segmento/CNAE e UFs) para alertas personalizados.`,
+    })
+  } catch {
+    console.error('[cadastro] falha ao enviar boas-vindas para', email)
+  }
+
   // Token próprio (uso único, 24h) + envio do e-mail de confirmação.
   try {
     const token = await criarVerificacao(userId, email)
