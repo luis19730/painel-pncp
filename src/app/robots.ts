@@ -1,15 +1,52 @@
 import type { MetadataRoute } from 'next'
 
+const BASE = 'https://www.painelpncp.com.br'
+
 export default function robots(): MetadataRoute.Robots {
-  const base = process.env.NEXT_PUBLIC_APP_URL || 'https://painelpncp.com.br'
   return {
     rules: [
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/admin/', '/api/'],
+        // Áreas internas/privadas não devem ser indexadas.
+        disallow: [
+          '/api/',
+          '/admin',
+          '/dashboard',
+          '/oportunidades',
+          '/busca',
+          '/meu-radar',
+          '/alertas',
+          '/favoritos',
+          '/precos',
+          '/precos-inteligentes',
+          '/concorrentes',
+          '/analise-edital',
+          '/ia-licitacoes',
+          '/score',
+          '/modalidades',
+          '/estudo-tecnico',
+          '/matriz-riscos',
+          '/checklist',
+          '/justificativa',
+          '/documentos',
+          '/montagem-processo',
+          '/meus-processos',
+          '/sinapi',
+          '/relatorios',
+          '/calendario',
+          '/perfil',
+          '/configuracoes',
+          '/credenciamento-sicx',
+          '/checkout',
+          '/minha-assinatura',
+          '/plano-bloqueado',
+          '/login',
+          '/confirmado',
+        ],
       },
     ],
-    sitemap: `${base}/sitemap.xml`,
+    sitemap: `${BASE}/sitemap.xml`,
+    host: BASE,
   }
 }

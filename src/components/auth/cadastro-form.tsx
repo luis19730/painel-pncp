@@ -17,6 +17,9 @@ export default function CadastroForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [tipoPerfil, setTipoPerfil] = useState('fornecedor')
+  const [segmento, setSegmento] = useState('')
+  const [ufs, setUfs] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -62,7 +65,7 @@ export default function CadastroForm() {
       const res = await fetch('/api/auth/cadastro', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, confirmPassword }),
+        body: JSON.stringify({ name, email, password, confirmPassword, perfil: tipoPerfil, segmento, ufs }),
       })
       const data = await res.json().catch(() => null)
 
@@ -82,6 +85,24 @@ export default function CadastroForm() {
 
       setAwaitingConfirmation(true)
       setLoading(false)
+      // Perfil inicial (opcional) salvo localmente para já personalizar
+      // alertas/score. Pode ser ajustado depois em "Meu Perfil".
+      try {
+        localStorage.setItem('perfilEmpresa', JSON.stringify({
+          razaoSocial: name.trim(),
+          perfil: tipoPerfil,
+          cnaes: [],
+          segmentos: segmento ? segmento.split(',').map((s) => s.trim()).filter(Boolean) : [],
+          produtos: [],
+          servicos: [],
+          palavrasChave: [],
+          estados: ufs ? ufs.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean) : [],
+          municipios: [],
+          valorMinimo: null,
+          valorMaximo: null,
+          modalidades: [],
+        }))
+      } catch { /* ignore */ }
       try {
         track({ event: 'signup', page: 'cadastro' })
       } catch {}
@@ -273,6 +294,41 @@ export default function CadastroForm() {
           onChange={(e) => setConfirmPassword(e.target.value)}
           required
         />
+        <div className="pt-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Personalize (opcional)</p>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1" htmlFor="tipo-perfil">Perfil</label>
+              <select
+                id="tipo-perfil"
+                value={tipoPerfil}
+                onChange={(e) => setTipoPerfil(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="fornecedor">Fornecedor</option>
+                <option value="empresa_licitacao">Empresa de licitação / consultoria</option>
+                <option value="orgao_publico">Órgão público</option>
+              </select>
+            </div>
+            <Input
+              label="Segmento / CNAE"
+              type="text"
+              placeholder="Ex.: informática, medicamentos, obras"
+              value={segmento}
+              onChange={(e) => setSegmento(e.target.value)}
+            />
+            <Input
+              label="UFs de interesse"
+              type="text"
+              placeholder="Ex.: SP, MG, PR"
+              value={ufs}
+              onChange={(e) => setUfs(e.target.value)}
+            />
+            <p className="text-[11px] text-slate-400">
+              Usamos esses dados para personalizar alertas e o score de oportunidade. Você pode ajustar depois em Meu Perfil.
+            </p>
+          </div>
+        </div>
         <Button type="submit" className="w-full" disabled={loading} loading={loading}>
           {loading ? 'Criando conta...' : 'Criar minha conta'}
         </Button>

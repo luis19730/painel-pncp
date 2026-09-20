@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Search, Filter, ArrowUpDown, AlertCircle, MapPin } from 'lucide-react';
+import { Search, Filter, ArrowUpDown, AlertCircle, MapPin, Zap } from 'lucide-react';
 import OpportunityCard from '@/components/opportunities/opportunity-card';
 import PageHeader from '@/components/ui/page-header';
 import DataSourceNotice, { type DataSource } from '@/components/ui/data-source-notice';
@@ -10,7 +10,7 @@ import { CardSkeleton } from '@/components/ui/skeleton';
 import { searchItems } from '@/lib/market-data';
 import { searchLiveOpportunities } from '@/lib/pncp-data';
 import { calculateScore, scoreOpportunities } from '@/lib/scoring';
-import { getOpportunityStatus } from '@/lib/utils';
+import { getOpportunityStatus, cn } from '@/lib/utils';
 import { itemToOpportunity } from '@/lib/opportunity';
 import { UFS_BRASIL } from '@/data/municipios';
 import { MODALIDADES_PNCP } from '@/lib/calendario/modalidades';
@@ -114,6 +114,8 @@ export default function OportunidadesPage() {
     next.keyword = kw;
     next.uf = params.get('uf') || '';
     next.modalidade = params.get('modalidade') || '';
+    // Filtro dedicado do SICX / Compras Expressas (credenciamento por comércio eletrônico).
+    if (params.get('sicx') === '1' && !next.modalidade) next.modalidade = 'Credenciamento';
     next.municipio = params.get('municipio') || '';
     next.orgao = params.get('orgao') || '';
     const sit = params.get('situacao') || params.get('status') || '';
@@ -237,6 +239,7 @@ export default function OportunidadesPage() {
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             placeholder="Buscar por palavra-chave (nome, descrição, código, órgão, fornecedor)..."
+            title="Busca por palavra-chave no objeto, órgão, município e número do edital."
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
           />
         </div>
@@ -250,23 +253,37 @@ export default function OportunidadesPage() {
           <Filter className="w-4 h-4" />
           Filtros:
         </div>
-        <select value={filters.uf} onChange={(e) => setFilter('uf', e.target.value)} className={SELECT_CLS}>
+        <select value={filters.uf} onChange={(e) => setFilter('uf', e.target.value)} className={SELECT_CLS} title="Filtra pelo estado (UF) do órgão comprador.">
           <option value="">UF (Todas)</option>
           {UF_OPTIONS.map((uf) => (
             <option key={uf} value={uf}>{uf}</option>
           ))}
         </select>
-        <select value={filters.modalidade} onChange={(e) => setFilter('modalidade', e.target.value)} className={SELECT_CLS}>
+        <select value={filters.modalidade} onChange={(e) => setFilter('modalidade', e.target.value)} className={SELECT_CLS} title="Modalidade de contratação (ex.: Pregão Eletrônico, Concorrência).">
           <option value="">Modalidade (Todas)</option>
           {MODALIDADES.map((m) => (
             <option key={m} value={m}>{m}</option>
           ))}
         </select>
+        <button
+          type="button"
+          onClick={() => setFilter('modalidade', filters.modalidade === 'Credenciamento' ? '' : 'Credenciamento')}
+          title="SICX / Compras Expressas: mostra os processos de credenciamento por comércio eletrônico (Lei nº 15.266/2025 / Decreto nº 13.106/2026)."
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-semibold transition-colors',
+            filters.modalidade === 'Credenciamento'
+              ? 'border-primary bg-primary/10 text-primary'
+              : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+          )}
+        >
+          <Zap className="w-3.5 h-3.5" /> SICX / Compras Expressas
+        </button>
         <input
           type="text"
           value={filters.municipio}
           onChange={(e) => setFilter('municipio', e.target.value)}
           placeholder="Município"
+          title="Trecho do nome do município."
           className="w-40 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-primary focus:outline-none"
         />
         <input
@@ -274,9 +291,10 @@ export default function OportunidadesPage() {
           value={filters.orgao}
           onChange={(e) => setFilter('orgao', e.target.value)}
           placeholder="Órgão"
+          title="Trecho do nome do órgão comprador."
           className="w-56 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-primary focus:outline-none"
         />
-        <select value={filters.situacao} onChange={(e) => setFilter('situacao', e.target.value)} className={SELECT_CLS}>
+        <select value={filters.situacao} onChange={(e) => setFilter('situacao', e.target.value)} className={SELECT_CLS} title="Editais com prazo aberto ou já encerrado.">
           <option value="">Situação (Todas)</option>
           {SITUACOES.map((s) => (
             <option key={s} value={s}>{s}</option>
@@ -289,6 +307,7 @@ export default function OportunidadesPage() {
           value={filters.valorMin}
           onChange={(e) => setFilter('valorMin', e.target.value)}
           placeholder="Valor mín."
+          title="Valor estimado mínimo do edital (R$)."
           className="w-28 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-primary focus:outline-none"
         />
         <input
@@ -298,6 +317,7 @@ export default function OportunidadesPage() {
           value={filters.valorMax}
           onChange={(e) => setFilter('valorMax', e.target.value)}
           placeholder="Valor máx."
+          title="Valor estimado máximo do edital (R$)."
           className="w-28 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-primary focus:outline-none"
         />
         <button

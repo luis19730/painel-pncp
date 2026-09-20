@@ -7,10 +7,11 @@ import PageviewTracker from "@/components/analytics/pageview-tracker";
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-display" });
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://painelpncp.com.br";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.painelpncp.com.br";
 
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
+  alternates: { canonical: "/" },
   title: {
     template: "%s | Painel PNCP",
     default: "Painel PNCP - Inteligência para licitações públicas",

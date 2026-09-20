@@ -42,6 +42,10 @@ export async function POST(req: Request) {
   const email = String(body.email ?? '').trim().toLowerCase()
   const password = String(body.password ?? '')
   const confirmPassword = String(body.confirmPassword ?? '')
+  // Perfil inicial (opcional) — usado para personalizar alertas/score.
+  const perfilTipo = String(body.perfil ?? '').trim()
+  const perfilSegmento = String(body.segmento ?? '').trim()
+  const perfilUfs = String(body.ufs ?? '').trim()
 
   const fail = (erro: string, status: number, extra: Record<string, unknown> = {}) =>
     NextResponse.json({ ok: false, erro, ...extra }, { status })
@@ -100,6 +104,24 @@ export async function POST(req: Request) {
     return fail('Não foi possível criar a conta. Tente novamente.', 500, { tentarReenviar: true })
   }
 
+  // Perfil inicial (opcional) persistido no user_metadata do usuário.
+  // Não-crítico: falha aqui não derruba o cadastro (o cliente também guarda
+  // uma cópia local para personalizar alertas/score).
+  try {
+    const segmentos = perfilSegmento ? perfilSegmento.split(',').map((s) => s.trim()).filter(Boolean) : []
+    const estados = perfilUfs ? perfilUfs.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean) : []
+    await admin.auth.admin.updateUserById(userId, {
+      user_metadata: {
+        name,
+        perfil: perfilTipo || 'fornecedor',
+        segmentos,
+        estados,
+      },
+    })
+  } catch {
+    console.error('[cadastro] falha ao salvar perfil inicial para', userId)
+  }
+
   // Plano inicial: free + trial de 15 dias. Falha aqui NÃO derruba o cadastro
   // (o plano é não-crítico; o usuário já foi criado). Se a tabela ainda não
   // existir no Supabase, registramos o erro e seguimos sem plano gravado.
@@ -129,6 +151,32 @@ export async function POST(req: Request) {
     })
   } catch {
     console.error('[cadastro] falha ao notificar admin do novo cadastro', email)
+  }
+
+  // E-mail de boas-vindas (não-crítico).
+  try {
+    await sendEmail({
+      to: email,
+      subject: 'Bem-vindo(a) ao Painel PNCP',
+      html: `
+        <div style="font-family:Inter,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1f2937">
+          <h2 style="color:#1f3a4d;margin:0 0 12px">Bem-vindo(a) ao Painel PNCP</h2>
+          <p>Olá, ${name}!</p>
+          <p>Sua conta foi criada. Confirme seu e-mail para ativar o acesso e já aproveitar:</p>
+          <ul>
+            <li>Busca de editais do PNCP</li>
+            <li>Análise de edital com IA</li>
+            <li>Pesquisa de preços</li>
+            <li>Alertas personalizados</li>
+            <li>Oportunidades do SICX (Compras Expressas)</li>
+          </ul>
+          <p>Depois de confirmar, complete seu perfil (segmento/CNAE e UFs) para receber alertas personalizados.</p>
+          <p style="color:#9ca3af;font-size:12px">Plataforma independente de consulta a dados públicos, sem vínculo com órgãos do Governo Federal.</p>
+        </div>`,
+      text: `Bem-vindo(a) ao Painel PNCP, ${name}! Confirme seu e-mail para ativar a conta e complete seu perfil (segmento/CNAE e UFs) para alertas personalizados.`,
+    })
+  } catch {
+    console.error('[cadastro] falha ao enviar boas-vindas para', email)
   }
 
   // Token próprio (uso único, 24h) + envio do e-mail de confirmação.

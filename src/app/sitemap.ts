@@ -1,24 +1,46 @@
 import type { MetadataRoute } from 'next'
+import { UFS_BRASIL } from '@/data/municipios'
+import { GUIAS } from '@/content/guias'
+
+const BASE = 'https://www.painelpncp.com.br'
+
+const CATEGORIAS = [
+  'informatica', 'medicamentos', 'veiculos', 'servicos-de-limpeza', 'alimentacao',
+  'construcao', 'educacao', 'seguranca', 'saude', 'engenharia', 'consultoria', 'telecomunicacoes',
+]
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = process.env.NEXT_PUBLIC_APP_URL || 'https://painelpncp.com.br'
-  const states = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
+  const now = new Date()
 
-  const staticPages = [
-    { url: base, lastModified: new Date(), changeFrequency: 'weekly' as const, priority: 1.0 },
-    { url: `${base}/oportunidades`, lastModified: new Date(), changeFrequency: 'daily' as const, priority: 0.9 },
-    { url: `${base}/busca`, lastModified: new Date(), changeFrequency: 'weekly' as const, priority: 0.8 },
-    { url: `${base}/planos`, lastModified: new Date(), changeFrequency: 'monthly' as const, priority: 0.7 },
-    { url: `${base}/sobre`, lastModified: new Date(), changeFrequency: 'monthly' as const, priority: 0.5 },
-    { url: `${base}/licitacoes`, lastModified: new Date(), changeFrequency: 'daily' as const, priority: 0.9 },
+  const estaticas = [
+    '/', '/planos', '/sobre', '/sicx', '/termos', '/privacidade',
+    '/licitacoes', '/categorias', '/ajuda',
   ]
 
-  const statePages = states.map(s => ({
-    url: `${base}/licitacoes/${s.toLowerCase()}`,
-    lastModified: new Date(),
-    changeFrequency: 'daily' as const,
-    priority: 0.7,
-  }))
-
-  return [...staticPages, ...statePages]
+  return [
+    ...estaticas.map((p) => ({
+      url: `${BASE}${p}`,
+      lastModified: now,
+      changeFrequency: (p === '/' ? 'daily' : 'weekly') as 'daily' | 'weekly',
+      priority: p === '/' ? 1 : 0.7,
+    })),
+    ...UFS_BRASIL.map((uf) => ({
+      url: `${BASE}/licitacoes/${uf}`,
+      lastModified: now,
+      changeFrequency: 'daily' as const,
+      priority: 0.6,
+    })),
+    ...CATEGORIAS.map((c) => ({
+      url: `${BASE}/categorias/${c}`,
+      lastModified: now,
+      changeFrequency: 'weekly' as const,
+      priority: 0.6,
+    })),
+    ...GUIAS.map((g) => ({
+      url: `${BASE}/ajuda/${g.slug}`,
+      lastModified: now,
+      changeFrequency: 'monthly' as const,
+      priority: 0.5,
+    })),
+  ]
 }
