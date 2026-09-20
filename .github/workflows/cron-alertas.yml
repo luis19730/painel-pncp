@@ -1,0 +1,45 @@
+name: Alertas — processamento (5 min)
+
+# Dispara /api/cron/alertas a cada 5 minutos para processar os alertas
+# (envio imediato + lote programado). Protegido por CRON_SECRET.
+#
+# Observação: o GitHub Actions é o agendador; o intervalo mínimo prático do
+# cron do GitHub é ~5 min (rodadas podem atrasar em horários de pico).
+#
+# Secrets necessários (Settings > Secrets and variables > Actions):
+#   - PNCP_BASE_URL : https://www.painelpncp.com.br
+#   - CRON_SECRET   : mesmo valor do secret CRON_SECRET configurado no worker
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch: {}
+
+# Evita execuções sobrepostas do mesmo job.
+concurrency:
+  group: cron-alertas
+  cancel-in-progress: false
+
+jobs:
+  alertas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validar secrets
+        env:
+          PNCP_BASE_URL: ${{ secrets.PNCP_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "${PNCP_BASE_URL}" ] || [ -z "${CRON_SECRET}" ]; then
+            echo "::error::Configure os secrets PNCP_BASE_URL e CRON_SECRET em Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+      - name: Processar alertas
+        env:
+          PNCP_BASE_URL: ${{ secrets.PNCP_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -sS --fail-with-body --retry 2 --retry-delay 5 --max-time 120 \
+            -H "x-cron-secret: ${CRON_SECRET}" \
+            "${PNCP_BASE_URL}/api/cron/alertas"
