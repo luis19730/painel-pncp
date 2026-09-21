@@ -570,7 +570,7 @@ export default function AnaliseEditalPage() {
                 type="text"
                 value={link}
                 onChange={(e) => setLink(e.target.value)}
-                placeholder="https://pncp.gov.br/app/compras/... ou CNPJ-1-999999/2026"
+                placeholder="https://pncp.gov.br/app/editais/... ou CNPJ-1-999999/2026"
                 title="Cole o link do PNCP ou o número de controle (CNPJ-1-SEQ/ANO)."
                 className="flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               />

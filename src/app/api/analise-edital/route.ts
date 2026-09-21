@@ -30,8 +30,9 @@ const PNCP_BASE = process.env.NEXT_PUBLIC_PNCP_BASE || 'https://pncp.gov.br/api'
 function parsePncpRef(input: string): { cnpj: string; ano: string; seq: string } | null {
   const t = String(input || '').trim()
 
-  // Link: https://pncp.gov.br/app/compras/<cnpj>/<ano>/<seq>
-  const link = t.match(/\/compras\/(\d{14})\/(\d{4})\/(\d+)/)
+  // Link do edital no app do PNCP: /app/editais/<cnpj>/<ano>/<seq>
+  // (aceita também /compras/ para links antigos já compartilhados).
+  const link = t.match(/\/(?:editais|compras)\/(\d{14})\/(\d{4})\/(\d+)/)
   if (link) return { cnpj: link[1], ano: link[2], seq: link[3] }
 
   // id: CNPJ-1-SEQ/ANO
@@ -90,7 +91,7 @@ async function fetchPncpMeta(ref: string): Promise<PncpEditalMeta | null> {
       valor: Number(d.valorTotalEstimado ?? d.valorTotalHomologado ?? 0) || null,
       data_publicacao: d.dataPublicacaoPncp || null,
       data_encerramento: d.dataEncerramentoProposta || null,
-      link_edital: `https://pncp.gov.br/app/compras/${cnpj}/${ano}/${Number(seq)}`,
+      link_edital: `https://pncp.gov.br/app/editais/${cnpj}/${ano}/${Number(seq)}`,
     }
   } catch {
     return null

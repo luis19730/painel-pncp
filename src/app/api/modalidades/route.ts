@@ -250,7 +250,7 @@ function buildResponse(
       valor: Number(it.valor_global) || 0,
       numero: controle,
       link: controle
-        ? `https://pncp.gov.br/app/compras/${controle.split('-')[0]}/${ano}/${Number(seq)}`
+        ? `https://pncp.gov.br/app/editais/${controle.split('-')[0]}/${ano}/${Number(seq)}`
         : 'https://pncp.gov.br/app/editais',
     }
   })
