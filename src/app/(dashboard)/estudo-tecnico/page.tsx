@@ -7,8 +7,9 @@ import {
 import PageHeader from '@/components/ui/page-header';
 import StatCard from '@/components/ui/stat-card';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 import { buildPncpEditalUrl } from '@/lib/pncp';
+import { exportarWord, abrirImpressaoProcesso, escapeHtml } from '@/lib/contratacoes/export';
 
 const ETP_SECTIONS = [
   {
@@ -115,70 +116,65 @@ function refPncp(input: string): string {
   return url.includes('/app/editais/') ? url : '';
 }
 
-function gerarEtp(d: EtpForm): string {
+/** Extrai cnpj/ano/seq de um link ou número de controle do PNCP. */
+function parseRef(input: string): { cnpj: string; ano: string; seq: string } | null {
+  const t = (input || '').trim();
+  let m = t.match(/(?:editais|compras)\/(\d{14})\/(\d{4})\/(\d+)/);
+  if (m) return { cnpj: m[1], ano: m[2], seq: m[3] };
+  m = t.match(/^(\d{14})-\d+-(\d+)\/(\d{4})$/);
+  if (m) return { cnpj: m[1], ano: m[3], seq: m[2] };
+  return null;
+}
+
+function gerarEtpSecoes(d: EtpForm): Array<{ titulo: string; corpo: string }> {
   const hoje = new Date().toLocaleDateString('pt-BR');
   const link = refPncp(d.linkPncp);
+  return [
+    {
+      titulo: 'Identificação',
+      corpo: [
+        `Órgão/Unidade: ${d.orgao || '[órgão/unidade]'}`,
+        `Processo: ${d.processo || '[nº do processo]'}`,
+        `Objeto: ${d.objeto}`,
+        `Data de elaboração: ${hoje}`,
+        link ? `Referência no PNCP: ${link}` : '',
+      ].filter(Boolean).join('\n'),
+    },
+    { titulo: 'I – Descrição da necessidade', corpo: `A contratação de ${d.objeto} justifica-se pela seguinte necessidade: ${d.necessidade || '[descrever o problema/necessidade que motiva a contratação]'}.` },
+    { titulo: 'II – Previsão no Plano de Contratações Anual (PCA)', corpo: d.pca || 'A contratação está prevista no PCA do órgão (indicar o item/estimativa).' },
+    { titulo: 'III – Requisitos da contratação', corpo: d.requisitos || 'Requisitos técnicos, de sustentabilidade, de qualidade e de habilitação a serem observados.' },
+    { titulo: 'IV – Estimativa das quantidades', corpo: `Quantidade estimada: ${d.quantidade || '[quantidade]'} ${d.unidade || ''}. Base de cálculo: ${d.baseQuantidade || '[série histórica, consumo, planejamento ou demanda reprimida]'}.` },
+    { titulo: 'V – Levantamento de mercado e alternativas', corpo: `${d.alternativas || 'Foram analisadas as alternativas disponíveis no mercado; a solução escolhida mostrou-se a mais vantajosa em custo-benefício.'}${link ? `\nConsulta pública no PNCP: ${link}` : ''}` },
+    { titulo: 'VI – Estimativa do valor', corpo: `Valor estimado: ${d.valor || '[valor estimado]'}, apurado por pesquisa de preços (painel de preços, contratações similares e/ou cotações), conforme o art. 23 da Lei nº 14.133/2021.` },
+    { titulo: 'VII – Descrição da solução como um todo', corpo: d.solucao || 'A solução abrange o bem/serviço, as entregas, o ciclo de vida e as condições de execução.' },
+    { titulo: 'VIII – Parcelamento', corpo: d.parcelamento || 'A contratação não será parcelada / será parcelada conforme indicado, observada a vantajosidade.' },
+    { titulo: 'IX – Resultados pretendidos', corpo: (d.resultados || '[resultados e benefícios esperados, com indicadores de acompanhamento]') + '.' },
+    { titulo: 'X – Providências a serem adotadas', corpo: d.providencias || 'Adoção das providências prévias: adequação orçamentária, elaboração do Termo de Referência/Projeto e designação de fiscais.' },
+    { titulo: 'XI – Contratações correlatas e/ou interdependentes', corpo: d.correlatas || 'Não foram identificadas contratações correlatas ou interdependentes.' },
+    { titulo: 'XII – Responsáveis', corpo: d.responsavel || '[nome, cargo/matrícula do responsável pela elaboração do ETP]' },
+    { titulo: 'XIII – Adequação orçamentária', corpo: d.dotacao || 'Indicar programa/ação/elemento de despesa e a disponibilidade orçamentária para a contratação.' },
+    { titulo: 'Observação', corpo: 'Documento gerado como MINUTA de apoio. Não substitui a análise jurídica nem a conferência dos requisitos legais aplicáveis.' },
+  ];
+}
+
+function secoesParaTexto(sections: Array<{ titulo: string; corpo: string }>): string {
   return [
     'ESTUDO TÉCNICO PRELIMINAR (ETP)',
     '(Art. 18 da Lei nº 14.133/2021)',
     '',
-    `Órgão/Unidade: ${d.orgao || '[órgão/unidade]'}`,
-    `Processo: ${d.processo || '[nº do processo]'}`,
-    `Objeto: ${d.objeto}`,
-    `Data de elaboração: ${hoje}`,
-    link ? `Referência no PNCP: ${link}` : '',
-    '',
-    'I – DESCRIÇÃO DA NECESSIDADE',
-    `A contratação de ${d.objeto} justifica-se pela seguinte necessidade: ${d.necessidade || '[descrever o problema/necessidade que motiva a contratação]'}.`,
-    '',
-    'II – PREVISÃO NO PLANO DE CONTRATAÇÕES ANUAL (PCA)',
-    d.pca || 'A contratação está prevista no PCA do órgão (indicar o item/estimativa).',
-    '',
-    'III – REQUISITOS DA CONTRATAÇÃO',
-    d.requisitos || 'Requisitos técnicos, de sustentabilidade, de qualidade e de habilitação a serem observados.',
-    '',
-    'IV – ESTIMATIVA DAS QUANTIDADES',
-    `Quantidade estimada: ${d.quantidade || '[quantidade]'} ${d.unidade || ''}. Base de cálculo: ${d.baseQuantidade || '[série histórica, consumo, planejamento ou demanda reprimida]'}.`,
-    '',
-    'V – LEVANTAMENTO DE MERCADO E ALTERNATIVAS',
-    d.alternativas || 'Foram analisadas as alternativas disponíveis no mercado; a solução escolhida mostrou-se a mais vantajosa em custo-benefício.',
-    link ? `Consulta pública no PNCP: ${link}` : 'A pesquisa no PNCP pode ser incluída assim que houver referência do processo.',
-    '',
-    'VI – ESTIMATIVA DO VALOR',
-    `Valor estimado: ${d.valor || '[valor estimado]'}, apurado por pesquisa de preços (painel de preços, contratações similares e/ou cotações), conforme o art. 23 da Lei nº 14.133/2021.`,
-    '',
-    'VII – DESCRIÇÃO DA SOLUÇÃO COMO UM TODO',
-    d.solucao || 'A solução abrange o bem/serviço, as entregas, o ciclo de vida e as condições de execução.',
-    '',
-    'VIII – PARCELAMENTO',
-    d.parcelamento || 'A contratação não será parcelada / será parcelada conforme indicado, observada a vantajosidade.',
-    '',
-    'IX – RESULTADOS PRETENDIDOS',
-    (d.resultados || '[resultados e benefícios esperados, com indicadores de acompanhamento]') + '.',
-    '',
-    'X – PROVIDÊNCIAS A SEREM ADOTADAS',
-    d.providencias || 'Adoção das providências prévias: adequação orçamentária, elaboração do Termo de Referência/Projeto e designação de fiscais.',
-    '',
-    'XI – CONTRATAÇÕES CORRELATAS E/OU INTERDEPENDENTES',
-    d.correlatas || 'Não foram identificadas contratações correlatas ou interdependentes.',
-    '',
-    'XII – RESPONSÁVEIS',
-    d.responsavel || '[nome, cargo/matrícula do responsável pela elaboração do ETP]',
-    '',
-    'XIII – ADEQUAÇÃO ORÇAMENTÁRIA',
-    d.dotacao || 'Indicar programa/ação/elemento de despesa e a disponibilidade orçamentária para a contratação.',
-    '',
-    'Observação: documento gerado como MINUTA de apoio. Não substitui a análise jurídica nem a conferência dos requisitos legais aplicáveis.',
-  ].filter((l) => l !== '').join('\n');
+    ...sections.map((s) => `${s.titulo.toUpperCase()}\n${s.corpo}`),
+  ].join('\n\n');
 }
 
 export default function EstudoTecnicoPage() {
   const [progress, setProgress] = useState<Record<number, boolean>>({});
   const [form, setForm] = useState<EtpForm>(EMPTY);
   const [resultado, setResultado] = useState<string | null>(null);
+  const [secoes, setSecoes] = useState<Array<{ titulo: string; corpo: string }>>([]);
   const [copiado, setCopiado] = useState(false);
   const [aviso, setAviso] = useState('');
   const [gerando, setGerando] = useState(false);
+  const [buscando, setBuscando] = useState(false);
   const total = ETP_SECTIONS.length;
 
   const set = (k: keyof EtpForm, v: string) => setForm((f) => ({ ...f, [k]: v }));
@@ -191,8 +187,49 @@ export default function EstudoTecnicoPage() {
     setAviso('');
     setGerando(true);
     setCopiado(false);
-    setResultado(gerarEtp(form));
+    const s = gerarEtpSecoes(form);
+    setSecoes(s);
+    setResultado(secoesParaTexto(s));
     setGerando(false);
+  };
+
+  const buscarNoPncp = async () => {
+    const ref = parseRef(form.linkPncp);
+    if (!ref) {
+      setAviso('Informe um link ou número de controle válido do PNCP para buscar os dados.');
+      return;
+    }
+    setBuscando(true);
+    setAviso('');
+    try {
+      const path = `pncp/v1/orgaos/${ref.cnpj}/compras/${ref.ano}/${Number(ref.seq)}`;
+      let data: any = null;
+      for (const u of [`/api/pncp/${path}`, `https://pncp.gov.br/api/${path}`]) {
+        try {
+          const r = await fetch(u, { headers: { Accept: 'application/json' } });
+          if (!r.ok) continue;
+          data = await r.json();
+          if (data) break;
+        } catch {
+          /* tenta o próximo */
+        }
+      }
+      if (!data) {
+        setAviso('Não foi possível carregar os dados do PNCP agora.');
+        return;
+      }
+      const valorTxt = data.valorTotalEstimado ? formatCurrency(Number(data.valorTotalEstimado)) : '';
+      setForm((f) => ({
+        ...f,
+        orgao: f.orgao || data.orgaoEntidade?.razaoSocial || '',
+        processo: f.processo || String(data.numeroCompra || ''),
+        objeto: f.objeto || data.objetoCompra || '',
+        valor: f.valor || valorTxt,
+      }));
+      setAviso('Dados do processo carregados do PNCP. Revise e complete o restante.');
+    } finally {
+      setBuscando(false);
+    }
   };
 
   const copiar = async () => {
@@ -316,6 +353,16 @@ export default function EstudoTecnicoPage() {
                 )}
               </p>
             )}
+            <div className="mt-2">
+              <button
+                type="button"
+                onClick={buscarNoPncp}
+                disabled={buscando || !form.linkPncp.trim()}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 transition-colors"
+              >
+                <ExternalLink className="w-3.5 h-3.5" /> {buscando ? 'Buscando dados...' : 'Buscar dados no PNCP'}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -370,6 +417,23 @@ export default function EstudoTecnicoPage() {
                 className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
               >
                 <Download className="w-3.5 h-3.5" /> Baixar .txt
+              </button>
+              <button
+                onClick={() => exportarWord('Estudo Técnico Preliminar (ETP)', secoes, 'estudo-tecnico-preliminar')}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              >
+                <FileText className="w-3.5 h-3.5" /> Word
+              </button>
+              <button
+                onClick={() => {
+                  const html = secoes
+                    .map((s) => `<h2>${escapeHtml(s.titulo)}</h2><p>${escapeHtml(s.corpo).replace(/\n/g, '<br/>')}</p>`)
+                    .join('');
+                  abrirImpressaoProcesso(null, 'Estudo Técnico Preliminar (ETP)', html);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              >
+                <FileText className="w-3.5 h-3.5" /> PDF (imprimir/salvar)
               </button>
             </div>
           </div>
