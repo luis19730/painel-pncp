@@ -124,19 +124,19 @@ export const PNCP_EDITAIS_URL = 'https://pncp.gov.br/app/editais'
 export function buildPncpEditalUrl(o: { link?: string | null; id?: string }): string {
   const link = (o.link || '').trim()
   const id = String(o.id || '').trim()
+
+  // 1) Link JÁ específico da página do edital no app do PNCP.
+  //    Rota oficial (confirmada no bundle do PNCP): /app/editais/<cnpj>/<ano>/<seq>.
+  //    IMPORTANTE: NÃO usamos /app/compras/... — essa rota não é a página do
+  //    edital no front-end (é caminho de API) e não abre o item clicado.
+  if (/^https:\/\/pncp\.gov\.br\/app\/editais\/[^/]+\/[^/]+\/[^/]+/.test(link)) return link
+
+  // 2) id no formato do número de controle PNCP -> deep link da página do edital.
+  //    O app do PNCP monta: /editais/<cnpj>/<ano>/<parseInt(seq)>.
   const m = id.match(/^(\d{14})-(\d+)-(\d+)\/(\d{4})$/)
-
-  // 1) Link oficial e ESPECÍFICO do PNCP já disponível (ex.: app/compras/<cnpj>/<ano>/<seq>).
-  //    A listagem genérica (/app/editais) NÃO conta como específico — nesse caso
-  //    preferimos montar o deep link a partir do número de controle.
-  const ehListagem = /\/app\/editais\/?$/.test(link)
-  if (link.startsWith('https://pncp.gov.br/app/') && !ehListagem) return link
-
-  // 2) id no formato do número de controle PNCP -> deep link específico do edital.
-  //    `Number(seq)` remove zeros à esquerda (o PNCP usa o sequencial sem padding).
   if (m) {
     const [, cnpj, , seq, ano] = m
-    return `https://pncp.gov.br/app/compras/${cnpj}/${ano}/${Number(seq)}`
+    return `https://pncp.gov.br/app/editais/${cnpj}/${ano}/${Number(seq)}`
   }
 
   // 3) Sem identificador suficiente -> NÃO criar URL fictícia; abrir a listagem oficial.
@@ -146,11 +146,6 @@ export function buildPncpEditalUrl(o: { link?: string | null; id?: string }): st
 export function mapItem(item: PNCPItem): Opportunity {
   const cnpj = item.orgao_cnpj || ''
   const controle = item.numero_controle_pncp || ''
-  const itemOrigin = item.item_url
-    ? item.item_url.startsWith('http')
-      ? item.item_url
-      : `https://pncp.gov.br/app${item.item_url.startsWith('/') ? item.item_url : '/' + item.item_url}`
-    : null
 
   return {
     id: controle,
@@ -167,7 +162,10 @@ export function mapItem(item: PNCPItem): Opportunity {
     dataAbertura: item.data_publicacao_pncp || '',
     dataEncerramento: item.data_fim_vigencia || '',
     valor: parseFloat(String(item.valor_global)) || 0,
-    link: buildPncpEditalUrl({ link: itemOrigin, id: controle }),
+    // Link direto para a página do edital no PNCP (rota /app/editais/...),
+    // montado a partir do número de controle (o item_url da API é /compras/...,
+    // que NÃO é a rota de front-end).
+    link: buildPncpEditalUrl({ id: controle }),
     score: 0,
   }
 }
