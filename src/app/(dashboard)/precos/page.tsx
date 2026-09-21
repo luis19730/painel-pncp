@@ -1,20 +1,21 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Search, Medal, TrendingUp, TrendingDown, Package, Trophy, RefreshCw, AlertCircle, Table } from 'lucide-react';
 import PageHeader from '@/components/ui/page-header';
 import DataSourceNotice, { type DataSource } from '@/components/ui/data-source-notice';
 import StatCard from '@/components/ui/stat-card';
 import { Badge } from '@/components/ui/badge';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
-import { priceStats, searchItems, ITEMS, type PriceStats, type ItemRecord } from '@/lib/market-data';
-import { searchLivePriceData, priceStatsFromRecords } from '@/lib/pncp-data';
+import { type PriceStats } from '@/lib/market-data';
+import { searchLivePriceItems, priceStatsFromRecords, type PriceRecord } from '@/lib/pncp-data';
 
 export default function PrecosPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [debounced, setDebounced] = useState('');
   const [tab, setTab] = useState<'estatisticas' | 'vencedores' | 'evolucao' | 'amostra' | 'catalogo'>('estatisticas');
   const [stats, setStats] = useState<PriceStats | null>(null);
+  const [records, setRecords] = useState<PriceRecord[]>([]);
   const [source, setSource] = useState<DataSource>('live');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -41,25 +42,25 @@ export default function PrecosPage() {
 
     const t = setTimeout(async () => {
       try {
-        const live = await searchLivePriceData(debounced.trim() || 'ligacao');
+        const live = await searchLivePriceItems(debounced.trim() || 'servico');
         if (live && live.length > 0) {
           const s = priceStatsFromRecords(live);
           if (!cancelled) {
             setSource('live');
             setStats(s);
+            setRecords(live);
           }
         } else {
-          const s = priceStats(debounced.trim());
           if (!cancelled) {
-            setSource('local');
-            setStats(s);
+            setSource('live');
+            setStats(null);
+            setRecords([]);
           }
         }
       } catch {
         if (!cancelled) {
-          const s = priceStats(debounced.trim());
-          setSource('local');
-          setStats(s);
+          setStats(null);
+          setRecords([]);
           setError(false);
         }
       } finally {
@@ -72,11 +73,6 @@ export default function PrecosPage() {
       clearTimeout(t);
     };
   }, [debounced, reload]);
-
-  const itemCount = useMemo(
-    () => (debounced.trim() ? searchItems(debounced.trim()).length : ITEMS.length),
-    [debounced]
-  );
 
   return (
     <div className="space-y-6">
@@ -96,8 +92,8 @@ export default function PrecosPage() {
       {!loading && (
         <DataSourceNotice
           source={source}
-          liveText="Dados de editais consultados na API pública do PNCP. O índice público não expõe preços unitários reais — os valores de referência são estimados a partir do catálogo de mercado local."
-          localText="Sem conexão com o PNCP no momento — exibindo estimativas de referência a partir do catálogo local."
+          liveText="Preços REAIS dos itens das contratações do PNCP (valor unitário estimado), atualizados a cada consulta. A API pública de busca não expõe preço unitário — por isso consultamos os itens de cada contratação."
+          localText="Sem conexão com o PNCP no momento — não há preços reais para exibir agora."
         />
       )}
 
@@ -142,7 +138,7 @@ export default function PrecosPage() {
 
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="info">{stats.nome}{stats.codigo ? ` · Cód. ${stats.codigo}` : ''}</Badge>
-            <Badge variant="accent">{itemCount} itens no catálogo</Badge>
+            <Badge variant="accent">{records.length} itens com preço real</Badge>
           </div>
 
           <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800">
@@ -150,7 +146,6 @@ export default function PrecosPage() {
               { key: 'estatisticas' as const, label: 'Estatísticas', icon: TrendingUp },
               { key: 'vencedores' as const, label: 'Vencedores', icon: Trophy },
               { key: 'evolucao' as const, label: 'Evolução', icon: TrendingUp },
-              { key: 'catalogo' as const, label: 'Catálogo (198 itens)', icon: Package },
               { key: 'amostra' as const, label: 'Amostra completa', icon: Table },
             ].map((t) => (
               <button
@@ -172,8 +167,7 @@ export default function PrecosPage() {
             {tab === 'estatisticas' && <Estatisticas stats={stats} />}
             {tab === 'vencedores' && <Vencedores stats={stats} />}
             {tab === 'evolucao' && <Evolucao stats={stats} />}
-            {tab === 'catalogo' && <Catalogo search={debounced} />}
-            {tab === 'amostra' && <Amostra search={debounced} />}
+            {tab === 'amostra' && <Amostra records={records} />}
           </div>
         </>
       ) : (
@@ -322,76 +316,19 @@ function Evolucao({ stats }: { stats: PriceStats }) {
 
 const PAGE_SIZE = 15;
 
-function Catalogo({ search }: { search: string }) {
-  const filtered = searchItems(search);
-  const total = ITEMS.length;
-
-  return (
-    <div>
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <p className="text-xs text-slate-400">
-          Lista completa do catálogo com <b className="text-slate-700 dark:text-slate-200">{total} itens</b>
-          {search.trim()
-            ? <> · mostrando <b className="text-slate-700 dark:text-slate-200">{filtered.length}</b> resultado(s) para &quot;{search}&quot;</>
-            : null}
-          .
-        </p>
-        <span className="text-xs text-slate-400">Código CATMAT/CATSER</span>
-      </div>
-
-      <div className="overflow-x-auto max-h-[560px] overflow-y-auto rounded-xl border border-slate-100 dark:border-slate-800">
-        <table className="w-full text-sm">
-          <thead className="sticky top-0 bg-white dark:bg-slate-900">
-            <tr className="border-b border-slate-100 dark:border-slate-800 text-left">
-              <th className="px-4 py-3 font-medium text-slate-500">#</th>
-              <th className="px-4 py-3 font-medium text-slate-500">Código</th>
-              <th className="px-4 py-3 font-medium text-slate-500">Descrição do item</th>
-              <th className="px-4 py-3 font-medium text-slate-500">Órgão / Local</th>
-              <th className="px-4 py-3 font-medium text-slate-500">Modalidade</th>
-              <th className="px-4 py-3 font-medium text-slate-500 text-right">Valor unitário</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-            {filtered.map((item: ItemRecord, idx) => (
-              <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                <td className="px-4 py-2.5 text-xs text-slate-400 whitespace-nowrap">{idx + 1}</td>
-                <td className="px-4 py-2.5 text-xs font-mono text-slate-500 whitespace-nowrap">{item.codigo}</td>
-                <td className="px-4 py-2.5 font-medium text-slate-900 dark:text-white min-w-[220px]">
-                  <span className="block">{item.nome}</span>
-                  <span className="block text-xs font-normal text-slate-400">{item.descricao}</span>
-                </td>
-                <td className="px-4 py-2.5 text-slate-600 dark:text-slate-300">
-                  <span className="block text-xs">{item.orgao}</span>
-                  <span className="block text-xs text-slate-400">{item.uf} · {item.municipio}</span>
-                </td>
-                <td className="px-4 py-2.5 text-xs text-slate-500 whitespace-nowrap">{item.modalidade}</td>
-                <td className="px-4 py-2.5 font-semibold text-slate-900 dark:text-white text-right whitespace-nowrap">{formatCurrency(item.valor)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {filtered.length === 0 && (
-          <p className="py-12 text-center text-sm text-slate-400">Nenhum item encontrado para &quot;{search}&quot;.</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function Amostra({ search }: { search: string }) {
+function Amostra({ records }: { records: PriceRecord[] }) {
   const [page, setPage] = useState(1);
-  const filtered = searchItems(search);
-  const total = filtered.length;
+  const total = records.length;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const start = (page - 1) * PAGE_SIZE;
-  const visible = filtered.slice(start, start + PAGE_SIZE);
+  const visible = records.slice(start, start + PAGE_SIZE);
 
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <p className="text-xs text-slate-400">
-          A amostra desta análise contém <b className="text-slate-700 dark:text-slate-200">{total} itens</b>{' '}
-          {search.trim() ? `(filtrados por "${search}")` : 'do catálogo'}.
+          Amostra com <b className="text-slate-700 dark:text-slate-200">{total} itens</b> reais do PNCP
+          (valor unitário estimado).
         </p>
         <div className="flex items-center gap-2 text-sm">
           <button
@@ -418,38 +355,34 @@ function Amostra({ search }: { search: string }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-100 dark:border-slate-800 text-left">
-              <th className="px-4 py-3 font-medium text-slate-500">Código</th>
               <th className="px-4 py-3 font-medium text-slate-500">Descrição do item</th>
-              <th className="px-4 py-3 font-medium text-slate-500">Órgão / Data</th>
-              <th className="px-4 py-3 font-medium text-slate-500">Modalidade</th>
+              <th className="px-4 py-3 font-medium text-slate-500">Órgão / Local / Data</th>
+              <th className="px-4 py-3 font-medium text-slate-500">Unidade</th>
               <th className="px-4 py-3 font-medium text-slate-500 text-right">Valor unitário</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-            {visible.map((item: ItemRecord) => (
-              <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                <td className="px-4 py-3 text-xs font-mono text-slate-500 whitespace-nowrap">{item.codigo}</td>
-                <td className="px-4 py-3 font-medium text-slate-900 dark:text-white min-w-[220px]">
-                  <span className="block">{item.nome}</span>
-                  <span className="block text-xs font-normal text-slate-400">{item.descricao}</span>
-                </td>
+            {visible.map((r) => (
+              <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                <td className="px-4 py-3 font-medium text-slate-900 dark:text-white min-w-[220px]">{r.descricao}</td>
                 <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
-                  <span className="block text-xs">{item.orgao}</span>
-                  <span className="block text-xs text-slate-400">{formatDate(item.data)} · {item.uf} · {item.municipio}</span>
+                  <span className="block text-xs">{r.orgao}</span>
+                  <span className="block text-xs text-slate-400">{r.uf} · {r.municipio} · {r.data ? formatDate(r.data) : '—'}</span>
                 </td>
-                <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">{item.modalidade}</td>
-                <td className="px-4 py-3 font-semibold text-slate-900 dark:text-white text-right whitespace-nowrap">{formatCurrency(item.valor)}</td>
+                <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">{r.unidade || '—'}</td>
+                <td className="px-4 py-3 font-semibold text-slate-900 dark:text-white text-right whitespace-nowrap">{formatCurrency(r.valor)}</td>
               </tr>
             ))}
           </tbody>
         </table>
+        {total === 0 && (
+          <p className="py-12 text-center text-sm text-slate-400">Nenhum preço real encontrado para este termo.</p>
+        )}
       </div>
 
       <div className="flex items-center justify-between mt-4 text-xs text-slate-400">
-        <span>
-          Mostrando {start + 1}–{Math.min(start + PAGE_SIZE, total) || 0} de {total} itens
-        </span>
-        <span>Código CATMAT/CATSER</span>
+        <span>Mostrando {total === 0 ? 0 : start + 1}–{Math.min(start + PAGE_SIZE, total)} de {total} itens</span>
+        <span>Fonte: itens das contratações do PNCP</span>
       </div>
     </div>
   );

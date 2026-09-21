@@ -383,6 +383,94 @@ export async function searchLiveContratacoes(
 }
 
 // ============================================================================
+// PREÇOS REAIS (itens das contratações do PNCP).
+//
+// A API de BUSCA não expõe preço unitário, mas o endpoint de ITENS de cada
+// contratação retorna `descricao`, `valorUnitarioEstimado` e `quantidade` —
+// valores REAIS e atualizados. Esta função busca contratações recentes
+// (consulta), lê os itens e devolve registros de preço reais do termo buscado.
+// ============================================================================
+
+interface PncpItem {
+  numeroItem?: number
+  descricao?: string
+  unidadeMedida?: string
+  quantidade?: number | string
+  valorUnitarioEstimado?: number | string
+  valorTotal?: number | string
+}
+
+export async function searchLivePriceItems(
+  query: string,
+  opts: { dias?: number; limiteCompras?: number } = {}
+): Promise<PriceRecord[] | null> {
+  const termo = normalizar(query || '')
+  const compras = await searchLiveContratacoes({ dias: opts.dias ?? 30 })
+  if (!compras || compras.length === 0) return null
+
+  // Prioriza contratações cujo objeto menciona o termo.
+  const pool = termo
+    ? [...compras].sort(
+        (a, b) => (normalizar(b.objeto).includes(termo) ? 1 : 0) - (normalizar(a.objeto).includes(termo) ? 1 : 0)
+      )
+    : compras
+  const alvos = pool.slice(0, Math.min(opts.limiteCompras ?? 16, pool.length))
+
+  const settled = await Promise.allSettled(
+    alvos.map(async (o) => {
+      const m = o.id.match(/^(\d{14})-\d+-(\d+)\/(\d{4})$/)
+      if (!m) return { o, itens: [] as PncpItem[] }
+      const [, cnpj, seq, ano] = m
+      const path = `pncp/v1/orgaos/${cnpj}/compras/${ano}/${Number(seq)}/itens`
+      const urls = [`/api/pncp/${path}`, `${PNCP_BASE}/${path}`]
+      for (const u of urls) {
+        try {
+          const resp = await fetch(u, { headers: BROWSER_HEADERS, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) })
+          if (!resp.ok) continue
+          const data = await resp.json()
+          const itens: PncpItem[] = Array.isArray(data) ? data : data?.data || []
+          if (Array.isArray(itens) && itens.length > 0) return { o, itens }
+        } catch {
+          /* tenta a próxima */
+        }
+      }
+      return { o, itens: [] as PncpItem[] }
+    })
+  )
+
+  const records: PriceRecord[] = []
+  for (const r of settled) {
+    if (r.status !== 'fulfilled') continue
+    const { o, itens } = r.value
+    const objetoMatch = termo && normalizar(o.objeto).includes(termo)
+    for (const it of itens) {
+      const desc = String(it.descricao || '').trim()
+      if (!desc) continue
+      if (termo && !objetoMatch && !normalizar(desc).includes(termo)) continue
+      const valor = Number(it.valorUnitarioEstimado) || 0
+      if (!(valor > 0)) continue
+      records.push({
+        id: `${o.id}|${it.numeroItem ?? records.length}`,
+        descricao: desc,
+        unidade: String(it.unidadeMedida || '').trim(),
+        quantidade: Number(it.quantidade) || 1,
+        valor,
+        orgao: o.orgao,
+        orgaoCnpj: o.cnpj,
+        fornecedor: '',
+        fornecedorCnpj: '',
+        uf: o.uf,
+        municipio: o.municipio,
+        data: o.dataAbertura,
+      })
+    }
+  }
+
+  if (records.length === 0) return null
+  return records.slice(0, 300)
+}
+
+// ============================================================================
 // Preços reais de itens (Mapa de Preços)
 // ============================================================================
 

@@ -15,8 +15,16 @@ export default function JustificativaPage() {
   const [preco, setPreco] = useState('');
   const [resultado, setResultado] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
+  const [aviso, setAviso] = useState('');
+  const [gerando, setGerando] = useState(false);
 
   const gerar = () => {
+    if (!objeto.trim()) {
+      setAviso('Informe o objeto da contratação para gerar a justificativa.');
+      return;
+    }
+    setAviso('');
+    setGerando(true);
     const data = new Date().toLocaleDateString('pt-BR');
     const tipoTxt = tipo === 'servico' ? 'serviço' : tipo === 'material' ? 'material/suprimento' : 'mão de obra';
     const objetos = fornecedores.split(',')
@@ -54,6 +62,7 @@ export default function JustificativaPage() {
 
     setResultado(texto);
     setCopiado(false);
+    setGerando(false);
   };
 
   const copiar = async () => {
@@ -112,12 +121,18 @@ export default function JustificativaPage() {
             <Input value={fornecedores} onChange={(e) => setFornecedores(e.target.value)} placeholder="Ex.: Empresa A, Empresa B, Empresa C" className="py-2.5" />
           </div>
         </div>
+        {aviso && <p className="mb-3 text-sm text-amber-600 dark:text-amber-400">{aviso}</p>}
         <button
           onClick={gerar}
-          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-secondary px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+          disabled={gerando}
+          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-secondary px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-60"
         >
-          <Sparkles className="w-4 h-4" /> Gerar justificativa
+          <Sparkles className="w-4 h-4" /> {gerando ? 'Gerando...' : 'Gerar justificativa'}
         </button>
+        <p className="mt-3 text-[11px] text-slate-400">
+          A justificativa é uma minuta gerada a partir dos dados informados. Não substitui a análise
+          jurídica nem a conferência do edital; revise e adapte antes de usar.
+        </p>
       </div>
 
       {resultado === null ? (
