@@ -122,12 +122,18 @@ export const PNCP_EDITAIS_URL = 'https://pncp.gov.br/app/editais'
  *   - Sem identificador suficiente -> NÃO inventa URL; usa a listagem oficial.
  */
 export function buildPncpEditalUrl(o: { link?: string | null; id?: string }): string {
-  // 1) Link oficial e específico do PNCP já disponível (ex.: app/compras/<cnpj>/<ano>/<seq>).
-  if (o.link && o.link.startsWith('https://pncp.gov.br/app/')) return o.link
-
-  // 2) id no formato do número de controle PNCP -> deep link específico do edital.
+  const link = (o.link || '').trim()
   const id = String(o.id || '').trim()
   const m = id.match(/^(\d{14})-(\d+)-(\d+)\/(\d{4})$/)
+
+  // 1) Link oficial e ESPECÍFICO do PNCP já disponível (ex.: app/compras/<cnpj>/<ano>/<seq>).
+  //    A listagem genérica (/app/editais) NÃO conta como específico — nesse caso
+  //    preferimos montar o deep link a partir do número de controle.
+  const ehListagem = /\/app\/editais\/?$/.test(link)
+  if (link.startsWith('https://pncp.gov.br/app/') && !ehListagem) return link
+
+  // 2) id no formato do número de controle PNCP -> deep link específico do edital.
+  //    `Number(seq)` remove zeros à esquerda (o PNCP usa o sequencial sem padding).
   if (m) {
     const [, cnpj, , seq, ano] = m
     return `https://pncp.gov.br/app/compras/${cnpj}/${ano}/${Number(seq)}`

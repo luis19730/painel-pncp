@@ -63,6 +63,7 @@ export default function OpportunityCard({ item }: { item: any }) {
           href={href}
           target="_blank"
           rel="noopener noreferrer"
+          title="Abrir o edital no PNCP em nova aba (para baixar documentos pode ser exigido login gov.br)."
           className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-hover transition-colors"
         >
           Ver no PNCP
