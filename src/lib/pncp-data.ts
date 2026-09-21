@@ -1,8 +1,9 @@
-import { mapItems } from '@/lib/pncp'
+import { mapItems, buildPncpEditalUrl } from '@/lib/pncp'
 import type { Opportunity, PNCPItem } from '@/types'
 import { searchItems, ITEMS, type PriceStats } from '@/lib/market-data'
 import { normalizar, compactar } from '@/lib/utils'
 import { UFS_BRASIL } from '@/data/municipios'
+import { MODALIDADES_PNCP } from '@/lib/calendario/modalidades'
 
 // ============================================================================
 // Serviço central de acesso aos dados do PNCP.
@@ -221,6 +222,164 @@ export async function searchLiveOpportunities(
  */
 export function sourceFor(haveLive: boolean): DataSource {
   return haveLive ? 'live' : 'local'
+}
+
+// ============================================================================
+// CONTRATAÇÕES REAIS (API de consulta do PNCP).
+//
+// A API de BUSCA (usada por searchLiveOpportunities) NÃO expõe valor estimado
+// nem a data de encerramento das propostas — por isso não serve para métricas
+// de valor/abertas/encerradas. A API de CONSULTA
+// (/consulta/v1/contratacoes/publicacao) retorna `valorTotalEstimado`,
+// `dataEncerramentoProposta` e `situacaoCompraNome` — dados REAIS.
+//
+// Esta função busca contratações reais dos últimos N dias (por modalidade e
+// opcionalmente UF), com fallback direto/proxy. Retorna null quando nada
+// responde (a página deve exibir "indisponível", nunca dados fictícios).
+// ============================================================================
+
+interface ConsultaRaw {
+  numeroControlePNCP?: string
+  numeroCompra?: string | number | null
+  objetoCompra?: string
+  modalidadeNome?: string
+  situacaoCompraNome?: string
+  dataPublicacaoPncp?: string
+  dataEncerramentoProposta?: string | null
+  valorTotalEstimado?: string | number | null
+  valorTotalHomologado?: string | number | null
+  orgaoEntidade?: { cnpj?: string; razaoSocial?: string }
+  unidadeOrgao?: { ufSigla?: string; municipioNome?: string; nomeUnidade?: string }
+}
+
+export interface LiveContratacoesOptions {
+  uf?: string
+  modalidade?: string
+  municipio?: string
+  dias?: number
+  page?: number
+}
+
+function ymd(d: Date): string {
+  const y = d.getUTCFullYear()
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0')
+  const dd = String(d.getUTCDate()).padStart(2, '0')
+  return `${y}${m}${dd}`
+}
+
+/** Códigos oficiais de modalidade que casam com o nome informado (ou todos). */
+export function modalidadeCodesFromName(nome?: string): number[] {
+  if (!nome) return MODALIDADES_PNCP.map((m) => m.codigo)
+  const alvo = compactar(nome)
+  const found = MODALIDADES_PNCP.filter(
+    (m) => compactar(m.nome).includes(alvo) || alvo.includes(compactar(m.nome))
+  )
+  return found.length ? found.map((m) => m.codigo) : MODALIDADES_PNCP.map((m) => m.codigo)
+}
+
+async function fetchConsultaPage(params: URLSearchParams): Promise<ConsultaRaw[]> {
+  const qs = params.toString()
+  const urls = [
+    `/api/pncp/consulta?${qs}`,
+    `${PNCP_BASE}/consulta/v1/contratacoes/publicacao?${qs}`,
+    `${PNCP_PROXY.replace(/\/$/, '')}/consulta/v1/contratacoes/publicacao?${qs}`,
+  ]
+  for (const u of urls) {
+    try {
+      const resp = await fetch(u, { headers: BROWSER_HEADERS, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) })
+      if (!resp.ok) continue
+      const data = await resp.json()
+      const items: ConsultaRaw[] = data?.data || data?.items || []
+      if (Array.isArray(items) && items.length > 0) return items
+    } catch {
+      /* tenta a próxima */
+    }
+  }
+  return []
+}
+
+function mapConsultaItem(it: ConsultaRaw): Opportunity {
+  const cnpj = it.orgaoEntidade?.cnpj || ''
+  const controle = it.numeroControlePNCP || ''
+  return {
+    id: controle,
+    numero: String(it.numeroCompra || controle),
+    objeto: String(it.objetoCompra || '').substring(0, 300),
+    orgao: it.orgaoEntidade?.razaoSocial || '',
+    unidade: it.unidadeOrgao?.nomeUnidade || '',
+    cnpj,
+    modalidade: it.modalidadeNome || '',
+    esfera: '',
+    uf: it.unidadeOrgao?.ufSigla || '',
+    municipio: it.unidadeOrgao?.municipioNome || '',
+    situacao: it.situacaoCompraNome || '',
+    dataAbertura: it.dataPublicacaoPncp || '',
+    dataEncerramento: it.dataEncerramentoProposta || '',
+    valor: Number(it.valorTotalEstimado ?? it.valorTotalHomologado ?? 0) || 0,
+    link: buildPncpEditalUrl({ id: controle }),
+    score: 0,
+  }
+}
+
+/**
+ * Busca contratações REAIS do PNCP (com valor, situação e encerramento) dos
+ * últimos `dias` (padrão 30), por modalidade e opcionalmente UF/município.
+ * Retorna `Opportunity[]` ou `null` quando a API não respondeu.
+ */
+export async function searchLiveContratacoes(
+  opts: LiveContratacoesOptions = {}
+): Promise<Opportunity[] | null> {
+  const dias = Math.min(Math.max(opts.dias ?? 30, 1), 365)
+  const page = opts.page || 1
+  const key = `consulta|${opts.uf || ''}|${opts.modalidade || ''}|${opts.municipio || ''}|${dias}|${page}`
+
+  const fresh = lastGood.get(key)
+  if (fresh && Date.now() - fresh.ts < CACHE_TTL_MS) return fresh.data
+
+  const dataFinal = ymd(new Date())
+  const dataInicial = ymd(new Date(Date.now() - dias * 86400000))
+  const codes = modalidadeCodesFromName(opts.modalidade)
+
+  const settled = await Promise.allSettled(
+    codes.map((code) => {
+      const p = new URLSearchParams({
+        dataInicial,
+        dataFinal,
+        codigoModalidadeContratacao: String(code),
+        pagina: String(page),
+        tamanhoPagina: '50',
+      })
+      if (opts.uf) p.set('uf', opts.uf.toUpperCase())
+      return fetchConsultaPage(p)
+    })
+  )
+
+  const seen = new Set<string>()
+  const raw: ConsultaRaw[] = []
+  for (const r of settled) {
+    if (r.status !== 'fulfilled') continue
+    for (const it of r.value) {
+      const id = String(it.numeroControlePNCP || '')
+      if (!id || seen.has(id)) continue
+      seen.add(id)
+      raw.push(it)
+    }
+  }
+
+  if (raw.length > 0) {
+    let opps = raw.map(mapConsultaItem)
+    if (opts.uf) opps = opps.filter((o) => (o.uf || '').toUpperCase() === opts.uf!.toUpperCase())
+    if (opts.municipio)
+      opps = opps.filter((o) => normalizar(o.municipio).includes(normalizar(opts.municipio!)))
+    if (opts.modalidade)
+      opps = opps.filter((o) => compactar(o.modalidade).includes(compactar(opts.modalidade!)))
+    lastGood.set(key, { data: opps, ts: Date.now() })
+    return opps
+  }
+
+  const stale = lastGood.get(key)
+  if (stale) return stale.data
+  return null
 }
 
 // ============================================================================

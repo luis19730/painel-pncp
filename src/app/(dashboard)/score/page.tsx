@@ -6,7 +6,7 @@ import { Gauge, Target, Shield, ExternalLink, Info, ClipboardList, Search } from
 import PageHeader from '@/components/ui/page-header';
 import StatCard from '@/components/ui/stat-card';
 import { cn, formatCurrency, formatDate, getScoreLabel, normalizar } from '@/lib/utils';
-import { searchLiveOpportunities } from '@/lib/pncp-data';
+import { searchLiveContratacoes } from '@/lib/pncp-data';
 import { calculateScore } from '@/lib/scoring';
 import type { Opportunity, CompanyProfile } from '@/types';
 
@@ -52,7 +52,7 @@ export default function ScorePage() {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const live = await searchLiveOpportunities('licitacao');
+      const live = await searchLiveContratacoes({ dias: 30 });
       if (mounted) {
         setOpps(live && live.length > 0 ? live : null);
         if (live && live.length > 0) setSelected(live[0].id);

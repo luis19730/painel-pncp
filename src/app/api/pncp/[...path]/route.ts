@@ -252,6 +252,9 @@ export async function GET(
   let baseUrl: string
   if (pathStr.startsWith('search')) {
     baseUrl = `${PNCP_BASE}/search/`
+  } else if (pathStr.startsWith('consulta')) {
+    // API de consulta de contratações (traz valor, situação e encerramento).
+    baseUrl = `${PNCP_BASE}/consulta/v1/contratacoes/publicacao`
   } else {
     baseUrl = `${PNCP_BASE}/${pathStr}`
   }

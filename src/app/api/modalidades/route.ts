@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { requirePaidAccess } from '@/lib/auth/require-access'
+import { MODALIDADES_PNCP } from '@/lib/calendario/modalidades'
 
 export const dynamic = 'force-dynamic'
 
 const PNCP_BASE = process.env.NEXT_PUBLIC_PNCP_BASE || 'https://pncp.gov.br/api'
 const PNCP_PROXY = process.env.NEXT_PUBLIC_PNCP_PROXY || 'https://pncp-proxy.luis19730.workers.dev'
+const CONSULTA_PATH = '/consulta/v1/contratacoes/publicacao'
 const IBGE_BASE = 'https://servicodados.ibge.gov.br/api/v1/localidades'
 
 const BROWSER_HEADERS: Record<string, string> = {
@@ -86,23 +88,46 @@ async function fetchSearchRaw(q: string, ufs?: string): Promise<SearchHit[]> {
   return []
 }
 
+interface ConsultaRawItem {
+  numeroControlePNCP?: string
+  numeroCompra?: string | number | null
+  objetoCompra?: string
+  modalidadeNome?: string
+  situacaoCompraNome?: string
+  dataPublicacaoPncp?: string
+  dataEncerramentoProposta?: string | null
+  valorTotalEstimado?: string | number | null
+  valorTotalHomologado?: string | number | null
+  orgaoEntidade?: { cnpj?: string; razaoSocial?: string }
+  unidadeOrgao?: { ufSigla?: string; municipioNome?: string; nomeUnidade?: string }
+}
+
+/**
+ * Contratações REAIS via API de consulta do PNCP (traz valor, situação e data
+ * de encerramento — que a API de busca não expõe).
+ */
+async function fetchConsulta(params: URLSearchParams): Promise<ConsultaRawItem[]> {
+  const qs = params.toString()
+  const urls = [
+    `${PNCP_BASE}${CONSULTA_PATH}?${qs}`,
+    `${PNCP_PROXY.replace(/\/$/, '')}${CONSULTA_PATH}?${qs}`,
+  ]
+  for (const u of urls) {
+    const data = (await fetchJson(u, 15000)) as { data?: ConsultaRawItem[]; items?: ConsultaRawItem[] } | null
+    const items = data?.data || data?.items
+    if (Array.isArray(items) && items.length > 0) return items
+  }
+  return []
+}
+
 // Lista real de modalidades derivada da busca oficial do PNCP (deduplicada).
 async function getModalidades(): Promise<string[]> {
   const cacheKey = 'modalidades'
   const cached = getCache<string[]>(cacheKey)
   if (cached) return cached
 
-  const set = new Set<string>()
-  for (const term of MODALIDADE_TERMS) {
-    const items = await fetchSearchRaw(term)
-    for (const it of items) {
-      const m = it.modalidade_licitacao_nome?.trim()
-      if (m) set.add(m)
-    }
-    if (set.size >= 12) break
-  }
-
-  const list = Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  // Lista OFICIAL de modalidades de contratação (domínio do PNCP / Lei 14.133/2021).
+  const list = MODALIDADES_PNCP.map((m) => m.nome).sort((a, b) => a.localeCompare(b, 'pt-BR'))
   setCache(cacheKey, list)
   return list
 }
@@ -168,15 +193,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: true, modalidades }, { headers: cacheHeaders() })
   }
 
-  // ---- results (dados reais de contratações) ----
-  const items = await fetchSearchRaw('edital', uf || undefined)
-  if (items.length === 0) {
-    return NextResponse.json(
-      { ok: false, erro: 'Nenhuma contratação encontrada para os filtros selecionados.', semDados: true },
-      { headers: cacheHeaders() }
-    )
-  }
-
   const norm = (s: string) =>
     (s || '')
       .normalize('NFD')
@@ -184,37 +200,94 @@ export async function GET(request: NextRequest) {
       .toLowerCase()
       .trim()
 
+  // ---- results: contratações REAIS via API de consulta do PNCP ----
+  const ymd = (d: Date) =>
+    `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`
+  const dataFinal = ymd(new Date())
+  const dataInicial = ymd(new Date(Date.now() - 30 * 86400000))
+
+  const codesBase = modalidade
+    ? MODALIDADES_PNCP.filter((m) => norm(m.nome).includes(norm(modalidade))).map((m) => m.codigo)
+    : []
+  const codes = codesBase.length ? codesBase : MODALIDADES_PNCP.map((m) => m.codigo)
+
+  const settled = await Promise.allSettled(
+    codes.map((code) => {
+      const p = new URLSearchParams({
+        dataInicial,
+        dataFinal,
+        codigoModalidadeContratacao: String(code),
+        pagina: '1',
+        tamanhoPagina: '50',
+      })
+      if (uf) p.set('uf', uf)
+      return fetchConsulta(p)
+    })
+  )
+
+  const seen = new Set<string>()
+  const items: SearchHit[] = []
+  for (const r of settled) {
+    if (r.status !== 'fulfilled') continue
+    for (const it of r.value) {
+      const ctrl = String(it.numeroControlePNCP || '')
+      if (!ctrl || seen.has(ctrl)) continue
+      seen.add(ctrl)
+      const unidade = it.unidadeOrgao || {}
+      const seqMatch = ctrl.match(/-(\d+)\//)
+      items.push({
+        numero_controle_pncp: ctrl,
+        orgao_cnpj: it.orgaoEntidade?.cnpj || '',
+        orgao_nome: it.orgaoEntidade?.razaoSocial || '',
+        unidade_nome: unidade.nomeUnidade || '',
+        ano: String(ctrl.split('/')[1] || ''),
+        numero_sequencial: seqMatch ? seqMatch[1] : '',
+        title: it.objetoCompra || '',
+        description: it.objetoCompra || '',
+        objeto_compra: it.objetoCompra || '',
+        modalidade_licitacao_nome: it.modalidadeNome || '',
+        situacao_nome: it.situacaoCompraNome || '',
+        data_publicacao_pncp: it.dataPublicacaoPncp || '',
+        data_fim_vigencia: it.dataEncerramentoProposta || '',
+        valor_global: Number(it.valorTotalEstimado ?? it.valorTotalHomologado ?? 0) || 0,
+        uf: unidade.ufSigla || '',
+        municipio_nome: unidade.municipioNome || '',
+      })
+    }
+  }
+
+  if (items.length === 0) {
+    return NextResponse.json(
+      { ok: false, erro: 'Nenhuma contratação encontrada para os filtros selecionados.', semDados: true },
+      { headers: cacheHeaders() }
+    )
+  }
+
   const filtered = items.filter((it) => {
     if (uf && (it.uf || '').toUpperCase() !== uf) return false
-    if (municipio && !norm(it.municipio_nome || '').includes(norm(municipio))) return false
-    if (modalidade && !norm(it.modalidade_licitacao_nome || '').includes(norm(modalidade))) return false
+    if (municipio && !norm(String(it.municipio_nome || '')).includes(norm(municipio))) return false
+    if (modalidade && !norm(String(it.modalidade_licitacao_nome || '')).includes(norm(modalidade))) return false
     return true
   })
 
   const st = (it: SearchHit): string => {
-    const pub = String(it.data_publicacao_pncp || '')
-    if (String(it.situacao_nome || '').toLowerCase().includes('cancelad')) return 'Encerrada'
-    if (String(it.cancelado) === 'true') return 'Encerrada'
-    if (pub) {
-      return new Date(pub).getTime() >= Date.now() - 30 * 86400000 ? 'Aberta' : 'Encerrada'
-    }
+    const fim = String(it.data_fim_vigencia || '')
+    const sit = String(it.situacao_nome || '').toLowerCase()
+    if (/cancelad|revogad|anulad|desert|homologad|encerrad/.test(sit)) return 'Encerrada'
+    if (fim) return new Date(fim).getTime() >= Date.now() ? 'Aberta' : 'Encerrada'
+    if (/divulgad|recebendo|julgament|abert/.test(sit)) return 'Aberta'
     return 'Aberta'
   }
+
   if (situacao) {
     const target = situacao.toLowerCase() === 'aberta' ? 'Aberta' : 'Encerrada'
-    const withSt = filtered.filter((it) => st(it) === target)
-    if (withSt.length > 0 || filtered.length === 0) {
-      // usa o filtro por situação apenas quando faz sentido
+    const finalItems: SearchHit[] = []
+    const withoutSt: SearchHit[] = []
+    for (const it of filtered) {
+      if (st(it) === target) finalItems.push(it)
+      else withoutSt.push(it)
     }
-    if (withSt.length > 0) {
-      const finalItems = []
-      const withoutSt = []
-      for (const [i, it] of filtered.entries()) {
-        if (st(it) === target) finalItems.push(it)
-        else withoutSt.push(it)
-      }
-      return buildResponse([...finalItems, ...withoutSt], perPage, st, url, norm)
-    }
+    if (finalItems.length > 0) return buildResponse([...finalItems, ...withoutSt], perPage, st, url, norm)
   }
 
   return buildResponse(filtered, perPage, st, url, norm)

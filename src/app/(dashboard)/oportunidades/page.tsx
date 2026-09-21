@@ -8,9 +8,9 @@ import DataSourceNotice, { type DataSource } from '@/components/ui/data-source-n
 import EmptyState from '@/components/ui/empty-state';
 import { CardSkeleton } from '@/components/ui/skeleton';
 import { searchItems } from '@/lib/market-data';
-import { searchLiveOpportunities } from '@/lib/pncp-data';
+import { searchLiveContratacoes } from '@/lib/pncp-data';
 import { calculateScore, scoreOpportunities } from '@/lib/scoring';
-import { getOpportunityStatus, cn } from '@/lib/utils';
+import { getOpportunityStatus, cn, normalizar } from '@/lib/utils';
 import { itemToOpportunity } from '@/lib/opportunity';
 import { UFS_BRASIL } from '@/data/municipios';
 import { MODALIDADES_PNCP } from '@/lib/calendario/modalidades';
@@ -37,7 +37,7 @@ const EMPTY_FILTERS: Filters = {
   modalidade: '',
   municipio: '',
   orgao: '',
-  situacao: '',
+  situacao: 'Aberta',
   valorMin: '',
   valorMax: '',
 };
@@ -142,16 +142,34 @@ export default function OportunidadesPage() {
         let opportunities: Opportunity[];
         let src: DataSource = 'local';
 
-        const live = await searchLiveOpportunities(filters.keyword || 'licitacao', {
+        const live = await searchLiveContratacoes({
           uf: filters.uf || undefined,
           modalidade: filters.modalidade || undefined,
           municipio: filters.municipio || undefined,
-          orgao: filters.orgao || undefined,
-          situacao: filters.situacao || undefined,
+          dias: 30,
         });
 
         if (live && live.length > 0) {
-          opportunities = live.filter(
+          let list = live;
+          // Palavra-chave, órgão e situação são aplicados no cliente (a API de
+          // consulta não aceita termo de busca).
+          if (filters.keyword) {
+            const termo = normalizar(filters.keyword);
+            list = list.filter((o) =>
+              normalizar(`${o.objeto} ${o.orgao} ${o.municipio} ${o.uf}`).includes(termo)
+            );
+          }
+          if (filters.orgao) {
+            const org = normalizar(filters.orgao);
+            list = list.filter((o) => normalizar(o.orgao).includes(org));
+          }
+          if (filters.situacao) {
+            list = list.filter((o) => {
+              const st = getOpportunityStatus(o.dataEncerramento || o.dataAbertura);
+              return filters.situacao === 'Aberta' ? st === 'aberta' : st === 'encerrada';
+            });
+          }
+          opportunities = list.filter(
             (o) =>
               (!Number.isFinite(valorMin) || !o.valor || o.valor >= valorMin) &&
               (!Number.isFinite(valorMax) || !o.valor || o.valor <= valorMax)
