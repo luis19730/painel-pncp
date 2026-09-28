@@ -4,6 +4,32 @@ import { requirePaidAccess } from '@/lib/auth/require-access'
 
 const PNCP_BASE = 'https://pncp.gov.br/api'
 const PNCP_SEARCH = `${PNCP_BASE}/search/`
+const PNCP_PROXY = 'https://pncp-proxy.luis19730.workers.dev'
+
+async function fetchComFallback(path: string, params: URLSearchParams): Promise<Response | null> {
+  // Tenta o PNCP direto; se o WAF bloquear o datacenter (520/522/timeout),
+  // repete via proxy oficial do projeto — mesma estratégia do restante do app.
+  for (const base of [PNCP_BASE, `${PNCP_PROXY}`]) {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 15000)
+    try {
+      const resp = await fetch(`${base}${path}${params.size ? '?' + params.toString() : ''}`, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 PainelPNCP/1.0',
+          'Accept': 'application/json',
+          'Accept-Language': 'pt-BR,pt;q=0.9',
+        },
+        signal: controller.signal,
+      })
+      clearTimeout(timer)
+      if (resp.ok) return resp
+    } catch {
+      clearTimeout(timer)
+      /* tenta a próxima fonte */
+    }
+  }
+  return null
+}
 
 const UFS = [
   'AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA',
@@ -210,27 +236,13 @@ export async function GET(
   }
 
   if (pathStr.startsWith('consulta')) {
-    const paramsStr = searchParams.toString()
+    const params = new URLSearchParams(searchParams)
     try {
-      const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 15000)
-      const resp = await fetch(
-        `${PNCP_BASE}/consulta/v1/contratacoes${paramsStr ? '?' + paramsStr : ''}`,
-        {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 PainelPNCP/1.0',
-            'Accept': 'application/json',
-            'Accept-Language': 'pt-BR,pt;q=0.9',
-          },
-          signal: controller.signal,
-        }
-      )
-      clearTimeout(timeout)
-
-      if (!resp.ok) {
+      const resp = await fetchComFallback(`/consulta/v1/contratacoes${pathStr.includes('publicacao') ? '/publicacao' : ''}`, params)
+      if (!resp) {
         return NextResponse.json(
-          { error: true, message: `PNCP ${resp.status}`, items: [], total: 0 },
-          { status: resp.status }
+          { error: true, message: 'Erro ao consultar PNCP', items: [], total: 0 },
+          { status: 500 }
         )
       }
 
@@ -249,38 +261,19 @@ export async function GET(
     }
   }
 
-  let baseUrl: string
+  let fallbackPath: string
   if (pathStr.startsWith('search')) {
-    baseUrl = `${PNCP_BASE}/search/`
-  } else if (pathStr.startsWith('consulta')) {
-    // API de consulta de contratações (traz valor, situação e encerramento).
-    baseUrl = `${PNCP_BASE}/consulta/v1/contratacoes/publicacao`
+    fallbackPath = '/search/'
   } else {
-    baseUrl = `${PNCP_BASE}/${pathStr}`
+    fallbackPath = `/${pathStr}`
   }
 
   try {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 15000)
-    const paramsStr = searchParams.toString()
-
-    const resp = await fetch(
-      `${baseUrl}${paramsStr ? '?' + paramsStr : ''}`,
-      {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 PainelPNCP/1.0',
-          'Accept': 'application/json',
-          'Accept-Language': 'pt-BR,pt;q=0.9',
-        },
-        signal: controller.signal,
-      }
-    )
-    clearTimeout(timeout)
-
-    if (!resp.ok) {
+    const resp = await fetchComFallback(fallbackPath, searchParams)
+    if (!resp) {
       return NextResponse.json(
-        { error: true, message: `PNCP ${resp.status}`, items: [], total: 0 },
-        { status: resp.status }
+        { error: true, message: 'Erro ao consultar PNCP', items: [], total: 0 },
+        { status: 500 }
       )
     }
 

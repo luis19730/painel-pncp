@@ -84,12 +84,16 @@ export async function GET(req: Request) {
   // endpoint REAL (busca) e replica a MESMA estratégia do app: tenta o PNCP
   // direto e, se o WAF bloquear (ex.: HTTP 520 vindo de datacenter), tenta o
   // proxy oficial do projeto. Só considera OK quando alguma fonte responde 2xx.
+  // A 3ª fonte (`/api/pncp/search`, mesma origem) é o caminho que o app consegue
+  // usar quando o WAF bloqueia o datacenter — idealmente responde pelo worker.
   const PNCP_PROXY = process.env.NEXT_PUBLIC_PNCP_PROXY || 'https://pncp-proxy.luis19730.workers.dev'
   let pncpOk = false
   let pncpDetalhe = 'Api indisponível'
+  const mesmaOrigem = new URL(req.url).origin
   const fontesPing: Array<{ nome: string; url: string }> = [
     { nome: 'direto', url: `${PNCP_BASE}/search/?q=licitacao&tipos_documento=edital&pagina=1` },
     { nome: 'proxy', url: `${PNCP_PROXY.replace(/\/$/, '')}/search/?q=licitacao&tipos_documento=edital&pagina=1` },
+    { nome: 'same-origin', url: `${mesmaOrigem}/api/pncp/search?q=licitacao&tipos_documento=edital&pagina=1` },
   ]
   for (const fonte of fontesPing) {
     try {
@@ -240,21 +244,24 @@ export async function GET(req: Request) {
     })
   }
 
-  // Total de view_opportunity: se zero, o tracking nunca disparou.
+  // Total de view_opportunity nos últimos 30 dias: se zero, o tracking não
+  // está gerando dados recentes. (Antes era sem filtro de período — o alerta
+  // nunca sumia após a primeira visualização registrada.)
+  const ha30 = new Date(agora.getTime() - 30 * 24 * 60 * 60 * 1000)
   const { count: viewsOportunidade } = await client
     .from('analytics_events')
     .select('id', { count: 'exact', head: true })
     .eq('event', 'view_opportunity')
+    .gte('created_at', ha30.toISOString())
   if ((viewsOportunidade || 0) === 0) {
     alertas.push({
       tipo: 'oportunidades_zerada',
-      mensagem: 'Nenhuma oportunidade visualizada registrada (tracking precisa gerar dados)',
+      mensagem: 'Nenhuma visualização de oportunidade nos últimos 30 dias (tracking precisa gerar dados)',
       gravidade: 'aviso',
     })
   }
 
   // Conversão zerada em 30 dias com cadastros acontecendo.
-  const ha30 = new Date(agora.getTime() - 30 * 24 * 60 * 60 * 1000)
   const { count: cadnavs30 } = await client
     .from('analytics_events')
     .select('id', { count: 'exact', head: true })

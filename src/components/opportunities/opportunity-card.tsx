@@ -1,16 +1,29 @@
 'use client'
 
 import Link from 'next/link'
+import { useState } from 'react'
 import { MapPin, Building2, Calendar, Coins, ExternalLink } from 'lucide-react'
 import { ScoreBadge } from '@/components/opportunities/score-badge'
 import FavoriteButton from '@/components/opportunities/favorite-button'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatDate, getDaysUntil, getDeadlineColor, getStatusColor } from '@/lib/utils'
 import { buildPncpEditalUrl } from '@/lib/pncp'
+import { track } from '@/lib/analytics'
 
 export default function OpportunityCard({ item }: { item: any }) {
   const days = getDaysUntil(item.dataEncerramento)
   const href = buildPncpEditalUrl(item)
+  const [viewed, setViewed] = useState(false)
+
+  const handleView = () => {
+    if (viewed) return
+    setViewed(true)
+    track({
+      event: 'view_opportunity',
+      page: 'oportunidade',
+      props: { id: item.id, origem: 'card' },
+    })
+  }
 
   return (
     <div className="card card-hover p-5 flex flex-col">
@@ -26,7 +39,12 @@ export default function OpportunityCard({ item }: { item: any }) {
         </div>
       </div>
 
-      <Link href={`/oportunidades/${item.id}`} className="group">
+      <Link
+        href={`/oportunidades/${item.id}`}
+        onClick={handleView}
+        className="group inline-flex items-start gap-1.5"
+        title="Abrir detalhes da oportunidade no painel"
+      >
         <h3 className="font-semibold text-slate-900 dark:text-white leading-snug line-clamp-2 group-hover:text-primary transition-colors mb-2">
           {item.objeto}
         </h3>
@@ -63,6 +81,7 @@ export default function OpportunityCard({ item }: { item: any }) {
           href={href}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={handleView}
           title="Abrir o edital no PNCP em nova aba (para baixar documentos pode ser exigido login gov.br)."
           className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary-hover transition-colors"
         >

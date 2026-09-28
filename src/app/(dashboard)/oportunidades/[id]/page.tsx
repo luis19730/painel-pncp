@@ -83,15 +83,18 @@ export default function OportunidadeDetailPage() {
         } else {
           setItem(null);
         }
+      } catch {
+        setItem(null);
+      } finally {
         setLoading(false);
+        // Tracking SEMPRE dispara quando a página de detalhe é aberta — mesmo
+        // se a busca da oportunidade falhar (PNCP instável). Sem isso, o evento
+        // nunca chegava ao banco quando a API não respondia.
         track({
           event: 'view_opportunity',
           page: 'oportunidade',
           props: { id },
         });
-      } catch {
-        setItem(null);
-        setLoading(false);
       }
     })();
   }, [id]);
