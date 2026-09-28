@@ -144,7 +144,7 @@ export async function processAsaasEvent(
       // Resolve plano × periodicidade pelo VALOR pago (cada link tem valor único).
       let valorCents = Math.round(Number(payment?.value || 0) * 100)
       if (Number.isNaN(valorCents) || valorCents <= 0) {
-        // tenta a partir de payment.value como string "39.90"
+        // tenta a partir de payment.value como string "19.90"
         const v = parseFloat(String(payment?.value || ''))
         valorCents = Number.isNaN(v) ? 0 : Math.round(v * 100)
       }
@@ -207,7 +207,7 @@ export async function processAsaasEvent(
       nextDueDate: proxima,
       lastPaymentAt,
       // Período de uso (fim do acesso) conta a partir da data do pagamento:
-      // pagou R$ 39,90 (mensal) → +1 mês de uso, e assim por diante.
+      // pagou R$ 19,90 (mensal) → +1 mês de uso, e assim por diante.
       trialFim: proxima,
     })
     await registrarEvento(client, {

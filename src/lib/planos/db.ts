@@ -265,7 +265,7 @@ export async function atualizarStatusAssinatura(
     /**
      * Fim do período de uso (linha temporal que rege o acesso). Ao receber um
      * pagamento, o app o estende a partir da data do pagamento + o ciclo
-     * contratado (ex.: 39,90 mensal → +1 mês de uso).
+     * contratado (ex.: 19,90 mensal → +1 mês de uso).
      */
     trialFim?: string | null
   }

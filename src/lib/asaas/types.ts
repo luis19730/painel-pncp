@@ -6,27 +6,55 @@
 // Preços em CENTAVOS (inteiros) para evitar erro de ponto flutuante.
 // ============================================================================
 
+export type PlanoId = 'pro' | 'empresa'
+
 // ---------------------------------------------------------------------------
-// Periodicidades disponíveis (desconto progressivo sobre o valor mensal).
-// `asaasCycle` é o ciclo nativo do ASAAS; `dias` define a renovação/expiração.
+// Periodicidades disponíveis. `asaasCycle` é o ciclo nativo do ASAAS; `dias`
+// define a renovação/expiração da assinatura.
 // ---------------------------------------------------------------------------
 export const CICLOS = [
-  { id: 'mensal',     label: 'Mensal',     asaasCycle: 'MONTHLY',    dias: 30,  descontoPct: 0  },
-  { id: 'trimestral', label: 'Trimestral', asaasCycle: 'QUARTERLY',  dias: 90,  descontoPct: 10 },
-  { id: 'semestral',  label: 'Semestral',  asaasCycle: 'SEMIANNUAL', dias: 180, descontoPct: 15 },
-  { id: 'anual',      label: 'Anual',      asaasCycle: 'YEARLY',     dias: 365, descontoPct: 25 },
+  { id: 'mensal',     label: 'Mensal',     asaasCycle: 'MONTHLY',    dias: 30  },
+  { id: 'trimestral', label: 'Trimestral', asaasCycle: 'QUARTERLY',  dias: 90  },
+  { id: 'semestral',  label: 'Semestral',  asaasCycle: 'SEMIANNUAL', dias: 180 },
+  { id: 'anual',      label: 'Anual',      asaasCycle: 'YEARLY',     dias: 365 },
 ] as const
 
 export type CicloId = (typeof CICLOS)[number]['id']
 export type AsaasCycle = (typeof CICLOS)[number]['asaasCycle']
 
-/** Base mensal de cada plano (em centavos). `empresa` == 'business' no banco. */
-const PRECO_MENSAL: Record<PlanoId, number> = {
-  pro: 3990,      // R$ 39,90
+/** Preço mensal de cada plano (em centavos). `empresa` == 'business' no banco. */
+export const PRECO_MENSAL: Record<PlanoId, number> = {
+  pro: 1990,      // R$ 19,90
   empresa: 12990, // R$ 129,90
 }
 
-export type PlanoId = 'pro' | 'empresa'
+/**
+ * Tabela OFICIAL de preços por plano × periodicidade (em centavos).
+ *
+ * PRO (novos valores aprovados):
+ *   mensal      R$ 19,90
+ *   trimestral  R$ 59,90
+ *   semestral   R$ 109,90
+ *   anual       R$ 209,90  ← mais vantajoso: equivale a ~R$ 17,49/mês
+ *
+ * EMPRESA (não mudou):
+ *   mensal R$ 129,90 · trimestral R$ 350,73 · semestral R$ 662,49 ·
+ *   anual R$ 1.169,10.
+ */
+const PRECOS_POR_CICLO: Record<PlanoId, Record<CicloId, number>> = {
+  pro: {
+    mensal: 1990,
+    trimestral: 5990,
+    semestral: 10990,
+    anual: 20990,
+  },
+  empresa: {
+    mensal: 12990,
+    trimestral: 35073,
+    semestral: 66249,
+    anual: 116910,
+  },
+}
 
 /** Converte o id de plano (checkout) para o valor da coluna user_planos.plano. */
 export function planoIdParaDb(planoId: PlanoId): 'pro' | 'business' {
@@ -37,24 +65,14 @@ export function cicloById(cicloId: string) {
   return CICLOS.find((c) => c.id === cicloId) || null
 }
 
-/** Desconto percentual de um ciclo (0–0.25). */
-export function descontoCiclo(cicloId: CicloId): number {
-  return (cicloById(cicloId)?.descontoPct || 0) / 100
-}
-
 /** Meses cobrados por ciclo (arredondado: anual = 365/30 → 12 meses). */
 function mesesDoCiclo(cic: (typeof CICLOS)[number]): number {
   return Math.round(cic.dias / 30)
 }
 
-/** Valor TOTAL do ciclo em centavos: base mensal × meses do ciclo, com desconto. */
+/** Valor TOTAL do ciclo em centavos — tabela oficial por plano × periodicidade. */
 export function precoCiclo(plano: PlanoId, cicloId: CicloId): number {
-  const base = PRECO_MENSAL[plano]
-  const cic = cicloById(cicloId)
-  if (!cic) return base
-  const bruto = Math.round(base * mesesDoCiclo(cic))
-  const desconto = Math.round(bruto * descontoCiclo(cicloId))
-  return bruto - desconto
+  return PRECOS_POR_CICLO[plano]?.[cicloId] ?? PRECO_MENSAL[plano]
 }
 
 /** Equivalente por mês (centavos) dado o valor total do ciclo. */
@@ -62,6 +80,19 @@ export function precoMensalEquivalente(plano: PlanoId, cicloId: CicloId): number
   const cic = cicloById(cicloId)
   if (!cic) return PRECO_MENSAL[plano]
   return Math.round(precoCiclo(plano, cicloId) / mesesDoCiclo(cic))
+}
+
+/**
+ * Desconto REAL do ciclo (%) comparado a pagar o mensal por N meses.
+ * Retorna 0 quando não há desconto (ex.: trimestral PRO ≈ 0,33% a mais).
+ */
+export function descontoRealPct(plano: PlanoId, cicloId: CicloId): number {
+  const cic = cicloById(cicloId)
+  if (!cic || cic.id === 'mensal') return 0
+  const bruto = PRECO_MENSAL[plano] * mesesDoCiclo(cic)
+  if (bruto <= 0) return 0
+  const pct = Math.round((1 - precoCiclo(plano, cicloId) / bruto) * 100)
+  return Math.max(0, pct)
 }
 
 export interface PlanoComCiclos {
@@ -76,13 +107,13 @@ export const PLANOS = [
     id: 'pro',
     name: 'PRO',
     baseMensal: PRECO_MENSAL.pro,
-    descricao: 'Para empresas que querem encontrar mais oportunidades.',
+    descricao: 'Monitore licitações, dispensas e oportunidades do Compras.gov e da PNCP, rápido e por pouco.',
   },
   {
     id: 'empresa',
     name: 'EMPRESA',
     baseMensal: PRECO_MENSAL.empresa,
-    descricao: 'Para equipes que gerenciam múltiplas empresas.',
+    descricao: 'Para equipes que gerenciam múltiplas empresas com alertas e relatórios ilimitados.',
   },
 ] as const satisfies readonly PlanoComCiclos[]
 
