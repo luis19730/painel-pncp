@@ -9,18 +9,24 @@ const PNCP_PROXY = 'https://pncp-proxy.luis19730.workers.dev'
 async function fetchComFallback(path: string, params: URLSearchParams): Promise<Response | null> {
   // Tenta o PNCP direto; se o WAF bloquear o datacenter (520/522/timeout),
   // repete via proxy oficial do projeto — mesma estratégia do restante do app.
-  for (const base of [PNCP_BASE, `${PNCP_PROXY}`]) {
+  // O proxy é mais lento que a API direta, então recebe timeout maior.
+  for (const [base, timeout] of [
+    [PNCP_BASE, 15000],
+    [PNCP_PROXY, 28000],
+  ] as Array<[string, number]>) {
     const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 15000)
+    const timer = setTimeout(() => controller.abort(), timeout)
     try {
-      const resp = await fetch(`${base}${path}${params.size ? '?' + params.toString() : ''}`, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 PainelPNCP/1.0',
-          'Accept': 'application/json',
-          'Accept-Language': 'pt-BR,pt;q=0.9',
-        },
-        signal: controller.signal,
-      })
+      const url = `${base}${path}${params.size ? '?' + params.toString() : ''}`
+      const headers: Record<string, string> = {
+        'User-Agent': 'Mozilla/5.0 PainelPNCP/1.0',
+        'Accept': 'application/json',
+        'Accept-Language': 'pt-BR,pt;q=0.9',
+      }
+      // IMPORTANTE: o proxy externo responde 404/timeout se receber o header
+      // Referer do PNCP (verificado em testes). Só o enviamos ao PNCP direto.
+      if (base === PNCP_BASE) headers['Referer'] = 'https://pncp.gov.br/'
+      const resp = await fetch(url, { headers, signal: controller.signal })
       clearTimeout(timer)
       if (resp.ok) return resp
     } catch {

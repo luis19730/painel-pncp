@@ -39,6 +39,9 @@ export type DataSource = 'live' | 'local'
 const MAX_RETRIES = 3
 const BASE_DELAY_MS = 500
 const REQUEST_TIMEOUT_MS = 12000
+// O proxy externo é mais lento que a API direta (verificado em produção:
+// ~2-25s para /search/). Timeout próprio para as fontes via proxy.
+const PROXY_TIMEOUT_MS = 30000
 
 // Cache curto dos últimos dados válidos por query (reduz fallback em queda
 // passageira da API). Também serve dados em cache (ainda que ligeiramente
@@ -54,11 +57,20 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 // Retorna array (possivelmente vazio) quando o PNCP respondeu, ou `null` quando
 // a requisicao falhou (rede/timeout/HTTP/JSON invalido).
 async function trySearchUrl<T>(url: string): Promise<T[] | null> {
+  // Cabeçalhos e timeout por fonte: o proxy externo NÃO aceita o Referer do
+  // PNCP (responde 404/timeout) e é mais lento que a API direta. No navegador
+  // os headers proibidos são removidos automaticamente; no servidor precisamos
+  // omitir o Referer ao chamar o proxy.
+  const isProxy = url.startsWith(PNCP_PROXY) || url.startsWith('/api/pncp/')
+  const headers = isProxy
+    ? { 'User-Agent': 'Mozilla/5.0 PainelPNCP/1.0', Accept: 'application/json' }
+    : { ...BROWSER_HEADERS }
+  const timeout = isProxy ? PROXY_TIMEOUT_MS : REQUEST_TIMEOUT_MS
   let resp: Response | null = null
   try {
     resp = await fetch(url, {
-      headers: BROWSER_HEADERS,
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      headers,
+      signal: AbortSignal.timeout(timeout),
     })
   } catch (e) {
     // eslint-disable-next-line no-console
@@ -279,14 +291,28 @@ export function modalidadeCodesFromName(nome?: string): number[] {
 
 async function fetchConsultaPage(params: URLSearchParams): Promise<ConsultaRaw[]> {
   const qs = params.toString()
+  // ORDEM IMPORTANTE: o caminho que funciona no navegador é o DIRETO (o PNCP
+  // libera CORS * e o navegador envia fingerprint real — o WAF aceita). A rota
+  // same-origin exige sessão paga e o proxy externo é lento/instável, então
+  // vem depois. Antes o same-origin era o primeiro e fazia o indicador esperar
+  // o timeout server-side (WAF bloqueia o datacenter) antes de usar o direto.
   const urls = [
-    `/api/pncp/consulta?${qs}`,
     `${PNCP_BASE}/consulta/v1/contratacoes/publicacao?${qs}`,
+    `/api/pncp/consulta?${qs}`,
     `${PNCP_PROXY.replace(/\/$/, '')}/consulta/v1/contratacoes/publicacao?${qs}`,
   ]
   for (const u of urls) {
     try {
-      const resp = await fetch(u, { headers: BROWSER_HEADERS, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) })
+      // O proxy externo responde 404/timeout se receber o Referer do PNCP;
+      // o direto precisa dele só fora do navegador. Como isto roda no cliente,
+      // o navegador remove headers proibidos automaticamente — mantemos a
+      // chamada simples por fonte.
+      const headers: Record<string, string> = u.startsWith('/')
+        ? { Accept: 'application/json' }
+        : u.startsWith(PNCP_PROXY)
+          ? { 'User-Agent': 'Mozilla/5.0 PainelPNCP/1.0', Accept: 'application/json' }
+          : { ...BROWSER_HEADERS }
+      const resp = await fetch(u, { headers, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) })
       if (!resp.ok) continue
       const data = await resp.json()
       const items: ConsultaRaw[] = data?.data || data?.items || []
@@ -422,10 +448,15 @@ export async function searchLivePriceItems(
       if (!m) return { o, itens: [] as PncpItem[] }
       const [, cnpj, seq, ano] = m
       const path = `pncp/v1/orgaos/${cnpj}/compras/${ano}/${Number(seq)}/itens`
-      const urls = [`/api/pncp/${path}`, `${PNCP_BASE}/${path}`]
+      const urls = [`${PNCP_BASE}/${path}`, `/api/pncp/${path}`]
       for (const u of urls) {
         try {
-          const resp = await fetch(u, { headers: BROWSER_HEADERS, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) })
+          const isProxyAux = u.startsWith('/api/pncp/')
+          const headers = isProxyAux
+            ? { 'User-Agent': 'Mozilla/5.0 PainelPNCP/1.0', Accept: 'application/json' }
+            : { ...BROWSER_HEADERS }
+          const timeout = isProxyAux ? PROXY_TIMEOUT_MS : REQUEST_TIMEOUT_MS
+          const resp = await fetch(u, { headers, signal: AbortSignal.timeout(timeout) })
           if (!resp.ok) continue
           const data = await resp.json()
           const itens: PncpItem[] = Array.isArray(data) ? data : data?.data || []

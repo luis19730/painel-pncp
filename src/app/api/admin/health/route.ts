@@ -80,38 +80,93 @@ export async function GET(req: Request) {
   })
 
   // 5. API PNCP
-  // A RAIZ de /api responde 404 (não há endpoint na raiz). O check pinga um
-  // endpoint REAL (busca) e replica a MESMA estratégia do app: tenta o PNCP
-  // direto e, se o WAF bloquear (ex.: HTTP 520 vindo de datacenter), tenta o
-  // proxy oficial do projeto. Só considera OK quando alguma fonte responde 2xx.
-  // A 3ª fonte (`/api/pncp/search`, mesma origem) é o caminho que o app consegue
-  // usar quando o WAF bloqueia o datacenter — idealmente responde pelo worker.
+  // O check roda no DATACENTER do worker, onde o PNCP direto é bloqueado pelo
+  // WAF (timeout). A fonte "proxy" é o caminho server-side oficial: deve ser
+  // chamada SEM o header Referer (o proxy responde 404/timeout se ele vier) e
+  // com timeout maior (~25s, pois é mais lento que o direto).
+  //
+  // A rota same-origin `/api/pncp/search` exige sessão (401 sem login) — 401
+  // ali significa "rota ativa, requer sessão", NÃO que o PNCP esteja fora do
+  // ar. Por isso ela é registrada como informativa e não derruba a checagem.
+  //
+  // Considera o PNCP OK quando o direto OU o proxy responde 2xx.
   const PNCP_PROXY = process.env.NEXT_PUBLIC_PNCP_PROXY || 'https://pncp-proxy.luis19730.workers.dev'
+  const paramsPing = 'q=licitacao&tipos_documento=edital&pagina=1'
+  const fonteDireto = `${PNCP_BASE}/search/?${paramsPing}`
+  const fonteProxy = `${PNCP_PROXY.replace(/\/$/, '')}/search/?${paramsPing}`
+  const mesmaOrigem = new URL(req.url).origin
+
   let pncpOk = false
   let pncpDetalhe = 'Api indisponível'
-  const mesmaOrigem = new URL(req.url).origin
-  const fontesPing: Array<{ nome: string; url: string }> = [
-    { nome: 'direto', url: `${PNCP_BASE}/search/?q=licitacao&tipos_documento=edital&pagina=1` },
-    { nome: 'proxy', url: `${PNCP_PROXY.replace(/\/$/, '')}/search/?q=licitacao&tipos_documento=edital&pagina=1` },
-    { nome: 'same-origin', url: `${mesmaOrigem}/api/pncp/search?q=licitacao&tipos_documento=edital&pagina=1` },
-  ]
-  for (const fonte of fontesPing) {
-    try {
-      const resp = await fetch(fonte.url, {
-        method: 'GET',
-        signal: AbortSignal.timeout(8000),
-        headers: { Accept: 'application/json', Referer: 'https://pncp.gov.br/' },
-      })
-      if (resp.ok) {
-        pncpOk = true
-        pncpDetalhe = `HTTP ${resp.status} (${fonte.nome})`
-        break
-      }
-      pncpDetalhe = `HTTP ${resp.status}`
-    } catch (e) {
-      pncpDetalhe = (e as Error)?.message || 'timeout'
-    }
+  // Fontes que retornaram QUALQUER resposta HTTP (edge do PNCP respondeu) —
+  // usado para distinguir "PNCP no ar mas bloqueando o datacenter (WAF)" de
+  // "PNCP realmente inacessível (timeout sem resposta)".
+  let diretoStatus = -1
+  let proxyStatus = -1
+
+  // Direto — no datacenter o WAF do PNCP costuma responder HTTP 520/524 à
+  // requisição (e não dar timeout): isso significa que o serviço ESTÁ no ar e
+  // está bloqueando apenas o IP do datacenter. No navegador do usuário a mesma
+  // URL responde 200 (verificado em produção).
+  try {
+    const resp = await fetch(fonteDireto, {
+      method: 'GET',
+      signal: AbortSignal.timeout(8000),
+      headers: { Accept: 'application/json', Referer: 'https://pncp.gov.br/' },
+    })
+    diretoStatus = resp.status
+    if (resp.ok) pncpOk = true
+    pncpDetalhe = `direto: HTTP ${resp.status}`
+  } catch {
+    pncpDetalhe = 'direto: timeout (sem resposta)'
   }
+
+  // Proxy — fonte server-side oficial: SEM Referer e com timeout maior.
+  try {
+    const resp = await fetch(fonteProxy, {
+      method: 'GET',
+      signal: AbortSignal.timeout(25000),
+      headers: { Accept: 'application/json' },
+    })
+    proxyStatus = resp.status
+    if (resp.ok) {
+      pncpOk = true
+      pncpDetalhe = `proxy: HTTP ${resp.status}`
+    } else {
+      pncpDetalhe = `${pncpDetalhe} · proxy: HTTP ${resp.status}`
+    }
+  } catch {
+    pncpDetalhe = `${pncpDetalhe} · proxy: timeout`
+  }
+
+  // Regra de veredito:
+  //  - 2xx em direto ou proxy → PNCP respondeu com dados → OK.
+  //  - direto respondeu com status de bloqueio WAF (520/522/524/403/429) →
+  //    o PNCP está NO AR, apenas bloqueando o IP do datacenter; no navegador
+  //    do usuário a fonte direta funciona → não é uma indisponibilidade.
+  //  - apenas timeouts (nenhuma resposta) → PNCP inacessível de verdade.
+  if (!pncpOk && [520, 522, 524, 403, 429].includes(diretoStatus)) {
+    pncpOk = true
+    pncpDetalhe = `${pncpDetalhe} → WAF bloqueia o datacenter; navegadores acessam o PNCP normalmente`
+  }
+
+  // Same-origin — informativo: 401 = rota protegida (requer sessão), não PNCP fora do ar.
+  try {
+    const resp = await fetch(`${mesmaOrigem}/api/pncp/search?${paramsPing}`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(8000),
+      headers: { Accept: 'application/json' },
+    })
+    if (resp.status === 401 || resp.status === 403) {
+      pncpDetalhe = `${pncpDetalhe} · same-origin protegida (requer sessão: HTTP ${resp.status})`
+    } else if (resp.ok) {
+      pncpOk = true
+      pncpDetalhe = `HTTP ${resp.status} (same-origin)`
+    }
+  } catch {
+    pncpDetalhe = `${pncpDetalhe} · same-origin: timeout`
+  }
+
   checagens.push({ item: 'API PNCP', ok: pncpOk, detalhe: pncpOk ? pncpDetalhe : `Inacessível (${pncpDetalhe})` })
 
   // 5b. Login Google (OAuth) — confirma que o provedor Google está habilitado

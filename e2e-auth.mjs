@@ -8,7 +8,7 @@ const BASE = 'https://painel-pncp.luis19730.workers.dev'
 const KV_NS = '8bb948ac1ff8446b8fdebce710c01d60'
 const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 const PORT = 9334
-const USER_DATA = 'C:/Users/User/AppData/Local/Temp/opencode/e2e-auth-profile'
+const USER_DATA = 'C:/Users/luisa/AppData/Local/Temp/opencode/e2e-auth-profile'
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const results = []
