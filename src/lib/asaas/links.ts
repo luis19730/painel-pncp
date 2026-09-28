@@ -22,11 +22,11 @@ export const LINKS_ASAAS: PlanoLink[] = [
   { plano: 'pro', ciclo: 'trimestral', url: 'https://www.asaas.com/c/4iycjzc963pxtuhg', valorCents: 5990 },
   { plano: 'pro', ciclo: 'semestral', url: 'https://www.asaas.com/c/9a7wem00asvrbu42', valorCents: 10990 },
   { plano: 'pro', ciclo: 'anual', url: 'https://www.asaas.com/c/xhzp3ae8dwzx0en7', valorCents: 20990 },
-  // EMPRESA (não mudou)
-  { plano: 'empresa', ciclo: 'mensal', url: 'https://www.asaas.com/c/8a5q8psrm8yyo0dc', valorCents: 12990 },
-  { plano: 'empresa', ciclo: 'trimestral', url: 'https://www.asaas.com/c/mmxcdt1ap178h8l0', valorCents: 35073 },
-  { plano: 'empresa', ciclo: 'semestral', url: 'https://www.asaas.com/c/287iaxvd3yxay4tz', valorCents: 66249 },
-  { plano: 'empresa', ciclo: 'anual', url: 'https://www.asaas.com/c/c71xf13gjimngs0f', valorCents: 116910 },
+  // EMPRESA (novos valores aprovados)
+  { plano: 'empresa', ciclo: 'mensal', url: 'https://www.asaas.com/c/8a5q8psrm8yyo0dc', valorCents: 9990 },
+  { plano: 'empresa', ciclo: 'trimestral', url: 'https://www.asaas.com/c/mmxcdt1ap178h8l0', valorCents: 26990 },
+  { plano: 'empresa', ciclo: 'semestral', url: 'https://www.asaas.com/c/287iaxvd3yxay4tz', valorCents: 49990 },
+  { plano: 'empresa', ciclo: 'anual', url: 'https://www.asaas.com/c/c71xf13gjimngs0f', valorCents: 89990 },
 ]
 
 /** Retorna o link de pagamento ASAAS para plano + periodicidade, ou null. */

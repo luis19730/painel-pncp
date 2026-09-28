@@ -24,22 +24,25 @@ export type AsaasCycle = (typeof CICLOS)[number]['asaasCycle']
 
 /** Preço mensal de cada plano (em centavos). `empresa` == 'business' no banco. */
 export const PRECO_MENSAL: Record<PlanoId, number> = {
-  pro: 1990,      // R$ 19,90
-  empresa: 12990, // R$ 129,90
+  pro: 1990,     // R$ 19,90
+  empresa: 9990, // R$ 99,90
 }
 
 /**
  * Tabela OFICIAL de preços por plano × periodicidade (em centavos).
  *
- * PRO (novos valores aprovados):
+ * PRO:
  *   mensal      R$ 19,90
  *   trimestral  R$ 59,90
  *   semestral   R$ 109,90
  *   anual       R$ 209,90  ← mais vantajoso: equivale a ~R$ 17,49/mês
  *
- * EMPRESA (não mudou):
- *   mensal R$ 129,90 · trimestral R$ 350,73 · semestral R$ 662,49 ·
- *   anual R$ 1.169,10.
+ * EMPRESA:
+ *   mensal      R$ 99,90
+ *   trimestral  R$ 269,90
+ *   semestral   R$ 499,90
+ *   anual       R$ 899,90  ← ideal para monitorar licitações o ano todo:
+ *                           equivale a ~R$ 74,99/mês (25% de economia).
  */
 const PRECOS_POR_CICLO: Record<PlanoId, Record<CicloId, number>> = {
   pro: {
@@ -49,10 +52,10 @@ const PRECOS_POR_CICLO: Record<PlanoId, Record<CicloId, number>> = {
     anual: 20990,
   },
   empresa: {
-    mensal: 12990,
-    trimestral: 35073,
-    semestral: 66249,
-    anual: 116910,
+    mensal: 9990,
+    trimestral: 26990,
+    semestral: 49990,
+    anual: 89990,
   },
 }
 
@@ -113,7 +116,7 @@ export const PLANOS = [
     id: 'empresa',
     name: 'EMPRESA',
     baseMensal: PRECO_MENSAL.empresa,
-    descricao: 'Para equipes que gerenciam múltiplas empresas com alertas e relatórios ilimitados.',
+    descricao: 'Monitoramento corporativo para equipes que acompanham licitações o ano todo, com múltiplas empresas, relatórios e IA.',
   },
 ] as const satisfies readonly PlanoComCiclos[]
 

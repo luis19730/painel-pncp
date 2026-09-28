@@ -14,7 +14,7 @@ import {
   descontoRealPct,
   formatReais,
 } from '@/lib/asaas/types'
-import type { CicloId } from '@/lib/asaas/types'
+import type { CicloId, PlanoId } from '@/lib/asaas/types'
 
 const FEATURES: Record<string, string[]> = {
   pro: [
@@ -43,6 +43,92 @@ const FEATURES: Record<string, string[]> = {
   ],
 }
 
+/** Cores da tabela comparativa por plano (PRO = primária; EMPRESA = violeta/corporativa). */
+const CORES_PLANO: Record<PlanoId, { ring: string; border: string; bg: string; text: string; badge: string }> = {
+  pro: {
+    ring: 'ring-primary',
+    border: 'border-primary',
+    bg: 'bg-primary-soft dark:bg-primary/10',
+    text: 'text-primary',
+    badge: 'bg-primary',
+  },
+  empresa: {
+    ring: 'ring-violet-500',
+    border: 'border-violet-500',
+    bg: 'bg-violet-50 dark:bg-violet-500/10',
+    text: 'text-violet-600 dark:text-violet-400',
+    badge: 'bg-violet-600',
+  },
+}
+
+function TabelaCiclos({ plano }: { plano: (typeof PLANOS)[number] }) {
+  const cores = CORES_PLANO[plano.id]
+  return (
+    <div className="mt-16 max-w-4xl mx-auto">
+      <p className="text-center text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-5">
+        Plano {plano.name} — compare as 4 opções de cobrança
+      </p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        {CICLOS.map((c) => {
+          const total = precoCiclo(plano.id, c.id)
+          const eq = precoMensalEquivalente(plano.id, c.id)
+          const economia = descontoRealPct(plano.id, c.id)
+          const melhorCusto = c.id === 'anual'
+          return (
+            <div
+              key={c.id}
+              className={cn(
+                'relative rounded-2xl border p-5 text-center',
+                melhorCusto ? cn(cores.bg, cores.border, cores.ring) : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'
+              )}
+            >
+              {melhorCusto && (
+                <div
+                  className={cn(
+                    'absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-white text-[11px] font-bold whitespace-nowrap shadow',
+                    cores.badge
+                  )}
+                >
+                  MAIS VANTAJOSO
+                </div>
+              )}
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                {c.label}
+              </p>
+              <p
+                className={cn(
+                  'text-2xl font-extrabold mt-1',
+                  melhorCusto ? cores.text : 'text-slate-900 dark:text-white'
+                )}
+              >
+                {formatReais(total)}
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">≈ {formatReais(eq)}/mês</p>
+              {economia > 0 && (
+                <p className="text-xs font-bold text-success mt-1">Economize {economia}%</p>
+              )}
+            </div>
+          )
+        })}
+      </div>
+      <p className="text-center text-sm text-slate-400 dark:text-slate-500 mt-5">
+        {plano.id === 'empresa' ? (
+          <>
+            Ideal para equipes que monitoram licitações o ano todo: o{' '}
+            <span className="font-bold text-slate-600 dark:text-slate-300">Empresa Anual</span> sai por{' '}
+            {formatReais(precoMensalEquivalente('empresa', 'anual'))}/mês, com 25% de economia.
+          </>
+        ) : (
+          <>
+            O plano <span className="font-bold text-slate-600 dark:text-slate-300">Anual</span> entrega o menor custo
+            mensal efetivo: {formatReais(precoMensalEquivalente('pro', 'anual'))}/mês.
+          </>
+        )}
+      </p>
+    </div>
+  )
+}
+
 export default function PlanosPage() {
   // O ANUAL é o mais vantajoso (menor custo mensal efetivo): já vem selecionado.
   const [ciclo, setCiclo] = useState<CicloId>('anual')
@@ -58,7 +144,7 @@ export default function PlanosPage() {
         align="center"
         eyebrow="Planos e preços"
         title="Monitore licitações e dispensas do Compras.gov por menos de R$ 0,58/dia"
-        subtitle="O Painel PNCP acompanha oportunidades, dispensas e licitações oficiais do Compras.gov e da PNCP em tempo real. Teste grátis por 15 dias — sem cartão de crédito para começar."
+        subtitle="O Painel PNCP acompanha oportunidades, dispensas e licitações oficiais do Compras.gov e da PNCP em tempo real — do empreendedor individual ao time corporativo de licitações. Teste grátis por 15 dias, sem cartão de crédito para começar."
         as="h1"
       />
 
@@ -100,7 +186,9 @@ export default function PlanosPage() {
           const mensalEq = precoMensalEquivalente(plan.id, ciclo)
           const economia = descontoRealPct(plan.id, ciclo)
           const cic = CICLOS.find((c) => c.id === ciclo)!
-          const highlighted = plan.id === 'pro'
+          const destaquePro = plan.id === 'pro'
+          const destaqueEmpresaAnual = plan.id === 'empresa' && ciclo === 'anual'
+          const destacado = destaquePro || destaqueEmpresaAnual
           const Icon = plan.id === 'empresa' ? Building2 : Sparkles
           const href = `/checkout?plano=${plan.id}&ciclo=${ciclo}&metodo=pix`
           return (
@@ -108,21 +196,28 @@ export default function PlanosPage() {
               key={plan.id}
               className={cn(
                 'relative bg-white dark:bg-slate-900 rounded-3xl border p-7 md:p-8 flex flex-col transition-all duration-200',
-                highlighted
+                destaquePro
                   ? 'border-transparent shadow-2xl shadow-primary/20 ring-2 ring-primary lg:-translate-y-3'
-                  : 'border-slate-200 dark:border-slate-700 hover:shadow-lg'
+                  : destaqueEmpresaAnual
+                    ? 'border-transparent shadow-2xl shadow-violet-500/20 ring-2 ring-violet-500 lg:-translate-y-3'
+                    : 'border-slate-200 dark:border-slate-700 hover:shadow-lg'
               )}
             >
-              {highlighted && (
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-primary to-secondary text-white text-xs font-bold shadow-lg">
+              {destaquePro && (
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-primary to-secondary text-white text-xs font-bold shadow-lg whitespace-nowrap">
                   MAIS POPULAR
+                </div>
+              )}
+              {destaqueEmpresaAnual && (
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-violet-500 to-accent text-white text-xs font-bold shadow-lg whitespace-nowrap">
+                  MAIS VANTAJOSO PARA O ANO TODO
                 </div>
               )}
 
               <div
                 className={cn(
                   'w-12 h-12 rounded-2xl bg-gradient-to-br flex items-center justify-center mb-5',
-                  highlighted ? 'from-primary to-secondary' : 'from-violet-500 to-accent'
+                  destaquePro ? 'from-primary to-secondary' : 'from-violet-500 to-accent'
                 )}
               >
                 <Icon className="w-6 h-6 text-white" />
@@ -147,9 +242,7 @@ export default function PlanosPage() {
                 Equivale a {formatReais(mensalEq)}/mês
               </p>
               {cic.id === 'anual' && (
-                <p className="text-xs font-bold text-success mb-1">
-                  Melhor custo mensal efetivo
-                </p>
+                <p className="text-xs font-bold text-success mb-1">Melhor custo mensal efetivo</p>
               )}
               {economia > 0 && (
                 <p className="text-xs font-bold text-success mb-4">Economize {economia}%</p>
@@ -167,7 +260,7 @@ export default function PlanosPage() {
                 ))}
               </ul>
 
-              <PlanCtaLink href={href} plano={plan.name} highlighted={highlighted}>
+              <PlanCtaLink href={href} plano={plan.name} highlighted={destacado}>
                 Assinar {plan.name}
               </PlanCtaLink>
             </div>
@@ -175,61 +268,15 @@ export default function PlanosPage() {
         })}
       </div>
 
-      {/* Tabela das 4 periodicidades do PRO — ANUAL em destaque */}
-      <div className="mt-16 max-w-4xl mx-auto">
-        <p className="text-center text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-5">
-          Plano PRO — compare as 4 opções de cobrança
-        </p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          {CICLOS.map((c) => {
-            const total = precoCiclo('pro', c.id)
-            const eq = precoMensalEquivalente('pro', c.id)
-            const economia = descontoRealPct('pro', c.id)
-            const melhorCusto = c.id === 'anual'
-            return (
-              <div
-                key={c.id}
-                className={cn(
-                  'relative rounded-2xl border p-5 text-center',
-                  melhorCusto
-                    ? 'bg-primary-soft dark:bg-primary/10 border-primary ring-1 ring-primary'
-                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'
-                )}
-              >
-                {melhorCusto && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-primary text-white text-[11px] font-bold whitespace-nowrap shadow">
-                    MAIS VANTAJOSO
-                  </div>
-                )}
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  {c.label}
-                </p>
-                <p
-                  className={cn(
-                    'text-2xl font-extrabold mt-1',
-                    melhorCusto ? 'text-primary' : 'text-slate-900 dark:text-white'
-                  )}
-                >
-                  {formatReais(total)}
-                </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">≈ {formatReais(eq)}/mês</p>
-                {economia > 0 && (
-                  <p className="text-xs font-bold text-success mt-1">Economize {economia}%</p>
-                )}
-              </div>
-            )
-          })}
-        </div>
-        <p className="text-center text-sm text-slate-400 dark:text-slate-500 mt-5">
-          O plano <span className="font-bold text-slate-600 dark:text-slate-300">Anual</span> entrega o menor custo
-          mensal efetivo: {formatReais(precoMensalEquivalente('pro', 'anual'))}/mês.
-        </p>
-      </div>
+      {/* Tabelas comparativas das 4 periodicidades — ANUAL em destaque em cada plano */}
+      {PLANOS.map((plan) => (
+        <TabelaCiclos key={`tabela-${plan.id}`} plano={plan} />
+      ))}
 
       <div className="mt-12 text-center">
         <p className="text-sm text-slate-400 dark:text-slate-500">
           Todos os planos incluem teste grátis de 15 dias. A primeira cobrança ocorre somente após o término do período
-          de teste. Os novos valores do plano PRO valem para contratações e renovações.
+          de teste. Os novos valores dos planos PRO e Empresa valem para contratações e renovações.
         </p>
       </div>
     </Section>
