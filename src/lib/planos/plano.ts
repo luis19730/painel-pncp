@@ -43,6 +43,9 @@ export interface PlanoRecord {
   next_due_date?: string | null
   last_payment_at?: string | null
   canceled_at?: string | null
+  /** Campanha de reativação: e-mail de recuperação pós-trial (cron diário). */
+  email_reactivation_sent?: boolean | null
+  email_reactivation_sent_at?: string | null
 }
 
 export type StatusTrial = 'em_teste' | 'expirado' | 'sem_trial'

@@ -117,3 +117,43 @@ export function trialLembreteEmailText(dias: number, nome: string, assinaturaLin
       : `seu período de teste no Painel PNCP terminou${dias === 0 ? '' : ` há ${Math.abs(dias)} dia(s)`}.`
   return `${inicio} ${corpo} Continue com busca avançada, pesquisa de preços, análise de edital com IA e relatórios. Gerencie sua assinatura em: ${assinaturaLink}`
 }
+
+// ---------------------------------------------------------------------------
+// Campanha de REATIVAÇÃO (pós-trial).
+//
+// Enviado pelo cron /api/cron/email-reativacao para usuários free com trial
+// expirado que ainda não receberam o e-mail de recuperação. CTA aponta para a
+// home (rel="noopener"), onde a conversão acontece. Conteúdo compartilhado com
+// o endpoint de teste manual do painel admin.
+// ---------------------------------------------------------------------------
+
+export const EMAIL_REATIVACAO_ASSUNTO = 'Seu teste terminou — continue por R$ 19,90/mês'
+
+export function emailReativacaoEmailHtml(siteUrl: string): string {
+  return `
+    <div style="font-family:Inter,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1f2937">
+      <h2 style="color:#1f3a4d;margin:0 0 12px">Seu período de teste terminou</h2>
+      <p>Olá!</p>
+      <p>Seu teste gratuito de <strong>15 dias</strong> no <strong>Painel PNCP</strong> chegou ao fim — mas você não precisa ficar sem as ferramentas que já conhece.</p>
+      <p>Continue consultando preços públicos, pesquisando oportunidades e gerando relatórios com o plano <strong>PRO</strong>.</p>
+      <p style="text-align:center;margin:20px 0 8px;font-size:20px;font-weight:700;color:#2560db">R$ 19,90/mês • 15 dias grátis</p>
+      <p style="text-align:center;margin:0 0 24px">
+        <a href="${siteUrl}" rel="noopener" style="background:#2560db;color:#ffffff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:600">Reativar meu acesso agora</a>
+      </p>
+      <p style="color:#6b7280;font-size:13px">Sem fidelidade. Cancele quando quiser, em poucos cliques.</p>
+      <p style="color:#374151">Atenciosamente,<br/>Equipe Painel PNCP</p>
+      <p style="color:#9ca3af;font-size:12px">Se você já assinou um plano, pode ignorar esta mensagem.</p>
+    </div>`
+}
+
+export function emailReativacaoEmailText(siteUrl: string): string {
+  return `Olá! Seu teste gratuito de 15 dias no Painel PNCP terminou, mas você não precisa ficar sem as ferramentas: continue consultando preços públicos, pesquisando oportunidades e gerando relatórios com o plano PRO.
+
+R$ 19,90/mês • 15 dias grátis
+Reative seu acesso agora: ${siteUrl}
+
+Sem fidelidade. Cancele quando quiser.
+
+Atenciosamente,
+Equipe Painel PNCP`
+}

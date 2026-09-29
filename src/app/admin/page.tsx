@@ -192,6 +192,8 @@ interface UsuarioPlano {
   canceledAt?: string | null
   proximaCobranca30d?: string | null
   diasParaCobranca30d?: number | null
+  emailReativacaoEnviado?: boolean
+  emailReativacaoEnviadoAt?: string | null
 }
 
 const STATUS_FILTROS = ['todos', 'trial', 'active', 'payment_pending', 'overdue', 'canceled', 'blocked'] as const
@@ -271,6 +273,7 @@ export default function AdminPage() {
   const [lastUpdated, setLastUpdated] = useState('')
 
   const [promovendoId, setPromovendoId] = useState<string | null>(null)
+  const [enviandoReativacaoId, setEnviandoReativacaoId] = useState<string | null>(null)
 
   const [eventoFiltro, setEventoFiltro] = useState('todos')
   const [filtroStatus, setFiltroStatus] = useState<string>('todos')
@@ -559,6 +562,30 @@ export default function AdminPage() {
     }
   }
 
+  const enviarReativacao = async (u: UsuarioPlano) => {
+    if (!window.confirm(`Enviar o e-mail de recuperação para ${u.email}?`)) return
+    setEnviandoReativacaoId(u.user_id)
+    setErro('usuarios', '')
+    try {
+      const res = await fetch('/api/admin/planos', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...headers() },
+        body: JSON.stringify({ user_id: u.user_id, acao: 'enviar_reativacao' }),
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) {
+        setErro('usuarios', data?.erro || 'Não foi possível enviar o e-mail de recuperação.', res)
+        return
+      }
+      window.alert(`E-mail de recuperação enviado para ${u.email}.`)
+      await loadTab('usuarios')
+    } catch {
+      setErro('usuarios', 'Falha de conexão com o servidor.')
+    } finally {
+      setEnviandoReativacaoId(null)
+    }
+  }
+
   const excluirUsuario = async () => {
     if (!excluirUser) return
     setExcluindo(true)
@@ -822,6 +849,8 @@ export default function AdminPage() {
             onRetroativar={() => void retroativarTrial()}
             testandoEmail={testandoEmail}
             onTestarEmail={() => void testarEmail()}
+            enviandoReativacaoId={enviandoReativacaoId}
+            onEnviarReativacao={(u) => void enviarReativacao(u)}
           />
         ) : tab === 'assinaturas' ? (
           <AssinaturasTab
@@ -1281,6 +1310,8 @@ function UsuariosTab({
   onRetroativar,
   testandoEmail,
   onTestarEmail,
+  enviandoReativacaoId,
+  onEnviarReativacao,
 }: {
   usuarios: UsuarioPlano[] | null
   loading: boolean
@@ -1298,6 +1329,8 @@ function UsuariosTab({
   onRetroativar: () => void
   testandoEmail: boolean
   onTestarEmail: () => void
+  enviandoReativacaoId: string | null
+  onEnviarReativacao: (u: UsuarioPlano) => void
 }) {
   return (
     <div className="space-y-4">
@@ -1357,7 +1390,7 @@ function UsuariosTab({
             </p>
           ) : (
             <div className="overflow-x-auto -mx-4 px-4">
-              <table className="w-full text-sm min-w-[720px]">
+              <table className="w-full text-sm min-w-[880px]">
                 <thead>
                   <tr className="text-left text-xs uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-700">
                     <th className="py-2 pr-4 font-semibold">E-mail</th>
@@ -1366,6 +1399,7 @@ function UsuariosTab({
                     <th className="py-2 pr-4 font-semibold">Plano</th>
                     <th className="py-2 pr-4 font-semibold">Status do teste</th>
                     <th className="py-2 pr-4 font-semibold">Fim do teste</th>
+                    <th className="py-2 pr-4 font-semibold">Recuperação</th>
                     <th className="py-2 font-semibold">Ação</th>
                   </tr>
                 </thead>
@@ -1415,6 +1449,15 @@ function UsuariosTab({
                       <td className="py-3 pr-4 text-slate-500">
                         {u.trialFim ? new Date(u.trialFim).toLocaleDateString('pt-BR') : '—'}
                       </td>
+                      <td className="py-3 pr-4">
+                        {u.emailReativacaoEnviado ? (
+                          <Badge variant="success">
+                            {`Sim${u.emailReativacaoEnviadoAt ? ` · ${new Date(u.emailReativacaoEnviadoAt).toLocaleDateString('pt-BR')}` : ''}`}
+                          </Badge>
+                        ) : (
+                          <Badge variant="accent">Não</Badge>
+                        )}
+                      </td>
                       <td className="py-3">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {(['free', 'pro', 'business'] as const).map((p) => (
@@ -1448,6 +1491,14 @@ function UsuariosTab({
                             className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-40"
                           >
                             <CalendarClock className="w-3 h-3" /> Trial
+                          </button>
+                          <button
+                            disabled={promovendoId === u.user_id || enviandoReativacaoId === u.user_id || !!u.emailReativacaoEnviado}
+                            onClick={() => onEnviarReativacao(u)}
+                            title={u.emailReativacaoEnviado ? 'E-mail de recuperação já enviado' : 'Enviar e-mail de recuperação (campanha de reativação)'}
+                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors disabled:opacity-40"
+                          >
+                            <Mail className="w-3 h-3" /> {enviandoReativacaoId === u.user_id ? 'Enviando…' : u.emailReativacaoEnviado ? 'Enviado' : 'Reativar'}
                           </button>
                           <button
                             disabled={promovendoId === u.user_id}

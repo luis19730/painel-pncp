@@ -38,6 +38,9 @@ export interface UsuarioComPlano {
   canceledAt: string | null
   proximaCobranca30d: string | null
   diasParaCobranca30d: number | null
+  /** Campanha de reativação: e-mail de recuperação pós-trial já enviado. */
+  emailReativacaoEnviado: boolean
+  emailReativacaoEnviadoAt: string | null
 }
 
 /**
@@ -99,6 +102,8 @@ export async function listarUsuariosComPlano(
         canceledAt: info.canceledAt,
         proximaCobranca30d: cobranca.proximaCobranca,
         diasParaCobranca30d: cobranca.diasParaCobranca,
+        emailReativacaoEnviado: !!rec?.email_reactivation_sent,
+        emailReativacaoEnviadoAt: rec?.email_reactivation_sent_at || null,
       }
     })
     .filter((u) => !filtro || u.email.toLowerCase().includes(filtro))

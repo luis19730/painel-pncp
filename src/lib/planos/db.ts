@@ -138,6 +138,51 @@ export async function marcarTrialEmailEnviado(client: AnyClient, userId: string)
 }
 
 /**
+ * Lista os candidatos à CAMPANHA DE REATIVAÇÃO: plano `free`, trial expirado
+ * (trial_fim < agora) e que ainda NÃO receberam o e-mail de recuperação.
+ * Filtros complementares (origem, bloqueio, assinatura ativa, e-mail válido)
+ * são aplicados em código por quem consome (cron / dry-run / admin).
+ */
+export async function listPlanosElegiveisReativacao(
+  client: AnyClient,
+  agora = new Date()
+): Promise<PlanoRecord[]> {
+  const { data, error } = await client
+    .from('user_planos')
+    .select('*')
+    .eq('plano', 'free')
+    .lt('trial_fim', agora.toISOString())
+    .is('email_reactivation_sent', false)
+  if (error) throw error
+  return (data || []) as PlanoRecord[]
+}
+
+/**
+ * Marca que o e-mail de recuperação foi enviado (após ENVIO com sucesso).
+ * Retorna true se gravou no banco; false se outro processo já havia marcado
+ * (guarda `email_reactivation_sent = false` na cláusula → idempotência mesmo
+ * com execuções concorrentes).
+ */
+export async function marcarEmailReativacaoEnviado(
+  client: AnyClient,
+  userId: string
+): Promise<boolean> {
+  const agora = new Date().toISOString()
+  const { data, error } = await client
+    .from('user_planos')
+    .update({
+      email_reactivation_sent: true,
+      email_reactivation_sent_at: agora,
+      updated_at: agora,
+    })
+    .eq('user_id', userId)
+    .is('email_reactivation_sent', false)
+    .select('user_id')
+  if (error) throw error
+  return !!data && data.length > 0
+}
+
+/**
  * TRIAL RETROATIVO — concede um trial de 15 dias a todos os usuários SEM
  * registro em user_planos (legados, criados antes da feature de trial).
  *

@@ -3,8 +3,12 @@ import { createServiceClient } from '@/lib/alerts/db'
 import { authorizeAdmin } from '@/lib/admin/auth'
 import { listarUsuariosComPlano } from '@/lib/admin/usuario-plano'
 import { listAllUsers } from '@/lib/supabase/admin'
-import { getPlano, setPlanoManual, setBloqueio, setTrialFim, backfillTrialLegados } from '@/lib/planos/db'
+import { getPlano, setPlanoManual, setBloqueio, setTrialFim, backfillTrialLegados, marcarEmailReativacaoEnviado } from '@/lib/planos/db'
 import { computePlanoInfo, type PlanoNome } from '@/lib/planos/plano'
+import { emailValido } from '@/lib/planos/reativacao'
+import { EMAIL_REATIVACAO_ASSUNTO, emailReativacaoEmailHtml, emailReativacaoEmailText } from '@/lib/planos/trial-email'
+import { sendEmail } from '@/lib/alerts/notifications/email'
+import { siteBaseUrl } from '@/lib/auth/site-url'
 
 export const dynamic = 'force-dynamic'
 
@@ -144,6 +148,39 @@ export async function POST(req: Request) {
       )
     }
     return NextResponse.json({ ok: true })
+  }
+
+  // Envio manual do e-mail de recuperação (campanha de reativação)
+  if (body.acao === 'enviar_reativacao') {
+    try {
+      const { users, error: usersErr } = await listAllUsers(client)
+      if (usersErr) throw usersErr
+      const usuario = (users || []).find((u) => u.id === userId)
+      const email = String(usuario?.email || '').trim()
+      if (!email || !emailValido(email)) {
+        return NextResponse.json({ ok: false, erro: 'Usuário sem e-mail válido para reativação.' }, { status: 400 })
+      }
+      const siteUrl = siteBaseUrl(req)
+      const result = await sendEmail({
+        to: email,
+        subject: EMAIL_REATIVACAO_ASSUNTO,
+        html: emailReativacaoEmailHtml(siteUrl),
+        text: emailReativacaoEmailText(siteUrl),
+      })
+      if (!result.ok) {
+        return NextResponse.json(
+          { ok: false, erro: result.erro || 'Não foi possível enviar o e-mail de recuperação.' },
+          { status: result.notConfigured ? 502 : 500 }
+        )
+      }
+      await marcarEmailReativacaoEnviado(client, userId)
+      return NextResponse.json({ ok: true, enviado: true, email })
+    } catch {
+      return NextResponse.json(
+        { ok: false, erro: 'Não foi possível enviar o e-mail de recuperação.' },
+        { status: 500 }
+      )
+    }
   }
 
   // Alteração de plano
