@@ -130,13 +130,27 @@ function TabelaCiclos({ plano }: { plano: (typeof PLANOS)[number] }) {
 }
 
 export default function PlanosPage() {
-  // O ANUAL é o mais vantajoso (menor custo mensal efetivo): já vem selecionado.
-  const [ciclo, setCiclo] = useState<CicloId>('anual')
+  // A página abre SEMPRE no ciclo MENSAL (nunca no anual). O anual continua
+  // destacado como "melhor custo" na tabela comparativa, mas só é aplicado
+  // quando o visitante escolhe — ou quando a URL traz ?ciclo=anual.
+  const [ciclo, setCiclo] = useState<CicloId>('mensal')
 
   // Evento de funil: visualização da página de planos (PLAN_VIEW).
   useEffect(() => {
     track({ event: 'plan_view', page: 'planos' })
   }, [])
+
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get('ciclo')
+    if (q && CICLOS.some((c) => c.id === q)) setCiclo(q as CicloId)
+  }, [])
+
+  function escolherCiclo(id: CicloId) {
+    setCiclo(id)
+    const url = new URL(window.location.href)
+    url.searchParams.set('ciclo', id)
+    window.history.replaceState(null, '', url)
+  }
 
   return (
     <Section>
@@ -156,7 +170,8 @@ export default function PlanosPage() {
           return (
             <button
               key={c.id}
-              onClick={() => setCiclo(c.id)}
+              onClick={() => escolherCiclo(c.id)}
+              aria-pressed={ativo}
               className={cn(
                 'relative rounded-xl px-5 py-2.5 text-sm font-semibold border transition-all',
                 ativo
