@@ -1,5 +1,4 @@
 import type { MetadataRoute } from 'next'
-import { UFS_BRASIL } from '@/data/municipios'
 import { GUIAS } from '@/content/guias'
 
 const BASE = 'https://www.painelpncp.com.br'
@@ -23,12 +22,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: now,
       changeFrequency: (p === '/' ? 'daily' : 'weekly') as 'daily' | 'weekly',
       priority: p === '/' ? 1 : 0.7,
-    })),
-    ...UFS_BRASIL.map((uf) => ({
-      url: `${BASE}/licitacoes/${uf}`,
-      lastModified: now,
-      changeFrequency: 'daily' as const,
-      priority: 0.6,
     })),
     ...CATEGORIAS.map((c) => ({
       url: `${BASE}/categorias/${c}`,

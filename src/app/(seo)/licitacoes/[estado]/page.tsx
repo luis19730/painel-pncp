@@ -28,6 +28,10 @@ export function generateMetadata({ params }: { params: Promise<{ estado: string 
       title: `Licitações em ${nome} (${uf})`,
       description: `Licitações públicas em ${nome} no PNCP, com valores, links do edital e filtros por categoria e modalidade. Receba alertas por e-mail.`,
       alternates: { canonical: `/licitacoes/${uf}` },
+      // A API do PNCP não filtra por UF no servidor: o filtro roda no cliente sobre
+      // uma única página de 10 itens, então estas páginas ficam quase sempre vazias.
+      // Mantidas no site para navegação, fora do índice até a fonte de dados mudar.
+      robots: { index: false, follow: true },
       openGraph: {
         title: `Licitações em ${nome} (${uf}) | Painel PNCP`,
         description: `Acompanhe licitações publicadas em ${nome}.`,
@@ -61,7 +65,7 @@ export default async function EstadoPage({ params }: { params: Promise<{ estado:
 
       <SectionHead
         title={`Licitações em ${nome} (${uf})`}
-        subtitle="Resultados recentes filtrados por UF."
+        subtitle="Use a busca completa para filtrar por cidade, categoria ou órgão."
         as="h1"
       />
 
@@ -71,10 +75,7 @@ export default async function EstadoPage({ params }: { params: Promise<{ estado:
         <ul className="space-y-4">
           {licitacoes.map((item) => (
             <li key={item.numeroControlePNCP}>
-              <Link
-                href={`/licitacoes/${uf}/${encodeURIComponent(item.municipioNome || 'geral')}`}
-                className="card p-4 block hover:border-primary/40 hover:shadow-md transition"
-              >
+              <div className="card p-4">
                 <h2 className="font-semibold text-slate-900 dark:text-white line-clamp-2">
                   {item.objetoCompra}
                 </h2>
@@ -84,7 +85,7 @@ export default async function EstadoPage({ params }: { params: Promise<{ estado:
                   <span>{item.municipioNome}</span>
                   <span>{formatDate(item.dataPublicacaoPncp)}</span>
                 </div>
-              </Link>
+              </div>
             </li>
           ))}
         </ul>

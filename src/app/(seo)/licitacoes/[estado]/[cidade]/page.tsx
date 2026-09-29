@@ -32,6 +32,9 @@ export function generateMetadata({
       title: `${nomeCidade} (${nomeEstado}): licitações com valores`,
       description: `Licitações públicas em ${nomeCidade}, ${nomeEstado}: valores, links do edital e filtros por categoria. Receba alertas por e-mail de cada publicação.`,
       alternates: { canonical: `/licitacoes/${uf}/${cidade}` },
+      // Mesma limitação da página de estado: sem filtro por município no servidor,
+      // o resultado é uma página sem itens. Fora do índice até a fonte mudar.
+      robots: { index: false, follow: true },
       openGraph: {
         title: `Licitações em ${nomeCidade} - ${nomeEstado} | Painel PNCP`,
         description: `Acompanhe licitações publicadas em ${nomeCidade}, ${nomeEstado}.`,

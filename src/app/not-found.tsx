@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Página não encontrada",
+  description: "A página que você procura não existe ou foi movida.",
+  robots: { index: false, follow: true },
+};
 
 export default function NotFound() {
   return (

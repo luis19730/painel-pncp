@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { Section, SectionHead } from '@/components/marketing/section'
 import { fetchSeoLicitacoes } from '@/lib/seo-data'
 
@@ -57,10 +56,7 @@ export default async function LicitacoesPage() {
         <ul className="space-y-4">
           {licitacoes.map((item) => (
             <li key={item.numeroControlePNCP}>
-              <Link
-                href={`/licitacoes/${item.uf}/${encodeURIComponent(item.municipioNome || 'geral')}`}
-                className="card p-4 block hover:border-primary/40 hover:shadow-md transition"
-              >
+              <div className="card p-4">
                 <h2 className="font-semibold text-slate-900 dark:text-white line-clamp-2">
                   {item.objetoCompra}
                 </h2>
@@ -70,7 +66,7 @@ export default async function LicitacoesPage() {
                   <span>{item.uf}</span>
                   <span>{formatDate(item.dataPublicacaoPncp)}</span>
                 </div>
-              </Link>
+              </div>
             </li>
           ))}
         </ul>
