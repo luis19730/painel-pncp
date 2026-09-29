@@ -3,6 +3,7 @@ import HomeContent from '@/components/marketing/home-content'
 
 export const metadata: Metadata = {
   title: { absolute: 'Painel PNCP - Consulta de Licitações e Montagem de Processos' },
+  alternates: { canonical: '/' },
   description:
     'Consulte licitações do PNCP em segundos, filtre editais por UF, modalidade e valor e monte processos licitatórios com apoio da ferramenta. Comece gratuitamente.',
   openGraph: {

@@ -26,7 +26,8 @@ export function generateMetadata({ params }: { params: Promise<{ estado: string 
     const nome = ESTADOS[uf] || uf
     return {
       title: `Licitações em ${nome} (${uf})`,
-      description: `Acompanhe licitações publicadas em ${nome} no Portal Nacional de Contratações Públicas.`,
+      description: `Licitações públicas em ${nome} no PNCP, com valores, links do edital e filtros por categoria e modalidade. Receba alertas por e-mail.`,
+      alternates: { canonical: `/licitacoes/${uf}` },
       openGraph: {
         title: `Licitações em ${nome} (${uf}) | Painel PNCP`,
         description: `Acompanhe licitações publicadas em ${nome}.`,

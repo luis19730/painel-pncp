@@ -29,8 +29,9 @@ export function generateMetadata({
     const nomeEstado = ESTADOS[uf] || uf
     const nomeCidade = decodeURIComponent(cidade)
     return {
-      title: `Licitações em ${nomeCidade} - ${nomeEstado}`,
-      description: `Acompanhe licitações publicadas em ${nomeCidade}, ${nomeEstado} no Portal Nacional de Contratações Públicas.`,
+      title: `${nomeCidade} (${nomeEstado}): licitações com valores`,
+      description: `Licitações públicas em ${nomeCidade}, ${nomeEstado}: valores, links do edital e filtros por categoria. Receba alertas por e-mail de cada publicação.`,
+      alternates: { canonical: `/licitacoes/${uf}/${cidade}` },
       openGraph: {
         title: `Licitações em ${nomeCidade} - ${nomeEstado} | Painel PNCP`,
         description: `Acompanhe licitações publicadas em ${nomeCidade}, ${nomeEstado}.`,

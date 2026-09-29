@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
 import { fetchSeoLicitacoes } from '@/lib/seo-data'
 import { Section, SectionHead } from '@/components/marketing/section'
 
@@ -54,16 +55,19 @@ function formatDate(d: string) {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
-  const nome = categoriasMap[slug] || slug
+  const nome = categoriasMap[slug]
+  if (!nome) return {}
   return {
-    title: `Licitações de ${nome}`,
-    description: `Encontre licitações públicas de ${nome} no Portal Nacional de Contratações Públicas.`,
+    title: `Licitações de ${nome} - valores e links`,
+    description: `Licitações de ${nome.toLowerCase()} no PNCP com valores, órgão comprador e link do edital. Compare preços e receba alerta a cada publicação.`,
+    alternates: { canonical: `/categorias/${slug}` },
   }
 }
 
 export default async function CategoriaPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const nome = categoriasMap[slug] || slug
+  const nome = categoriasMap[slug]
+  if (!nome) notFound()
   const q = queries[slug] || nome
 
   const items = (await fetchSeoLicitacoes({ q })) as unknown as SeoItem[]

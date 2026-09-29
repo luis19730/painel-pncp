@@ -11,7 +11,6 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.painelpncp.com.b
 
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
-  alternates: { canonical: "/" },
   title: {
     template: "%s | Painel PNCP",
     default: "Painel PNCP - Inteligência para licitações públicas",
