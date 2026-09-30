@@ -7,6 +7,7 @@ import { SICX } from '@/content/sicx'
 
 export const metadata: Metadata = {
   title: 'SICX — Sistema de Compras Expressas (Lei 15.266/2025)',
+  alternates: { canonical: '/sicx' },
   description:
     'Entenda o SICX (Sistema de Compras Expressas): criado pela Lei nº 15.266/2025, regulamentado pelo Decreto nº 13.106/2026, com credenciamento por comércio eletrônico integrado ao PNCP. Conteúdo informativo, sujeito a atualização normativa.',
 }

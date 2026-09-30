@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 // metadata; este layout define o título/descrição SEO da rota.
 export const metadata: Metadata = {
   title: 'Planos e preços',
+  alternates: { canonical: '/planos' },
   description:
     'Escolha o plano ideal para sua empresa: teste grátis por 15 dias, buscas ilimitadas, alertas, radar, score de oportunidade e apoio na montagem de processos licitatórios.',
 }

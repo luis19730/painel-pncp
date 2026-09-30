@@ -3,6 +3,7 @@ import { Section, SectionHead } from '@/components/marketing/section'
 
 export const metadata: Metadata = {
   title: 'Termos de Uso',
+  alternates: { canonical: '/termos' },
   description:
     'Leia os Termos de Uso do Painel PNCP e conheça as condições de utilização da plataforma.',
 }

@@ -3,6 +3,7 @@ import { Section, SectionHead } from '@/components/marketing/section'
 
 export const metadata: Metadata = {
   title: 'Política de Privacidade',
+  alternates: { canonical: '/privacidade' },
   description:
     'Saiba como o Painel PNCP coleta, utiliza e protege as suas informações pessoais.',
 }

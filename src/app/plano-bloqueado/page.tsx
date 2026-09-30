@@ -4,6 +4,8 @@ import { Badge } from '@/components/ui/badge'
 
 export const metadata = {
   title: 'Acesso bloqueado — Painel PNCP',
+  alternates: { canonical: '/plano-bloqueado' },
+  robots: { index: false, follow: true },
   description: 'Seu período de teste expirou.',
 }
 

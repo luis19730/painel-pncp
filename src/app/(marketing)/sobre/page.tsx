@@ -4,6 +4,7 @@ import { Section, SectionHead } from '@/components/marketing/section'
 
 export const metadata: Metadata = {
   title: 'Sobre o Painel PNCP',
+  alternates: { canonical: '/sobre' },
   description:
     'Conheça o Painel PNCP, a plataforma independente de consulta e análise de dados públicos de licitações do Brasil.',
 }

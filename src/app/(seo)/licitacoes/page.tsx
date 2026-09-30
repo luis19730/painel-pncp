@@ -4,6 +4,7 @@ import { fetchSeoLicitacoes } from '@/lib/seo-data'
 
 export const metadata: Metadata = {
   title: 'Licitações no Brasil',
+  alternates: { canonical: '/licitacoes' },
   description:
     'Acompanhe licitações publicadas no Portal Nacional de Contratações Públicas. Filtre por estado, cidade e categoria.',
   openGraph: {

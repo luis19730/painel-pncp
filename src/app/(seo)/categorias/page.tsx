@@ -3,6 +3,7 @@ import { Section, SectionHead } from '@/components/marketing/section'
 
 export const metadata = {
   title: 'Licitações por Categoria',
+  alternates: { canonical: '/categorias' },
   description: 'Encontre licitações públicas por categoria no PNCP.',
 }
 

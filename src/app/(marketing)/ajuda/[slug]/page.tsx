@@ -15,10 +15,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params
   const guia = getGuia(slug)
-  if (!guia) return { title: 'Guia não encontrado' }
+  if (!guia) return { title: 'Guia não encontrado', robots: { index: false, follow: true } }
   return {
     title: `${guia.titulo} — Ajuda`,
     description: guia.resumo,
+    alternates: { canonical: `/ajuda/${slug}` },
   }
 }
 
