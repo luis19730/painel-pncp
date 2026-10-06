@@ -142,8 +142,12 @@ function ordenarArquivos(arquivos: ArquivoPncp[]): ArquivoPncp[] {
   ]
 }
 
-// ZIP pode embalar o edital (PDF) e ser bem maior que 3 MB.
-const MAX_ZIP_BYTES = 30 * 1024 * 1024
+// ZIP pode embalar o edital (PDF). Limite conservador para não estourar a
+// memória/CPU do Worker (o parse de PDF é caro).
+const MAX_ZIP_BYTES = 8 * 1024 * 1024
+// Dentro de um ZIP, lê no máximo estes PDFs e ignora PDFs internos grandes.
+const MAX_PDFS_ZIP = 3
+const MAX_PDF_INTERNO = 2 * 1024 * 1024
 
 async function baixarArquivo(url: string): Promise<{ bytes?: Uint8Array; erro?: string }> {
   const tentativas = [url]
@@ -198,6 +202,7 @@ async function extrairTextoDeZip(bytes: Uint8Array): Promise<{ texto: string; er
     let off = view.getUint32(eocd + 16, true)
     const dec = new TextDecoder('utf-8')
     const textos: string[] = []
+    let lidos = 0
 
     for (let n = 0; n < total; n++) {
       if (off + 46 > bytes.length || view.getUint32(off, true) !== 0x02014b50) break
@@ -210,6 +215,7 @@ async function extrairTextoDeZip(bytes: Uint8Array): Promise<{ texto: string; er
       const name = dec.decode(bytes.subarray(off + 46, off + 46 + nameLen))
       off += 46 + nameLen + extraLen + commentLen
       if (!/\.pdf$/i.test(name)) continue
+      if (lidos >= MAX_PDFS_ZIP) break
       if (localOff + 30 > bytes.length || view.getUint32(localOff, true) !== 0x04034b50) continue
       const lNameLen = view.getUint16(localOff + 26, true)
       const lExtraLen = view.getUint16(localOff + 28, true)
@@ -224,9 +230,15 @@ async function extrairTextoDeZip(bytes: Uint8Array): Promise<{ texto: string; er
       } else {
         continue
       }
+      // PDF interno grande é ignorado (protege CPU/memória do Worker).
+      if (pdfBytes.length > MAX_PDF_INTERNO) continue
+      lidos++
       const ex = await extractPdfText(pdfBytes)
-      if (ex.ok && ex.text) textos.push(ex.text)
-      if (textos.join('\n').length > 400000) break
+      if (ex.ok && ex.text) {
+        textos.push(ex.text)
+        // Achou e-mail já no primeiro documento? para aqui (economiza CPU).
+        if (extrairEmails(textos.join('\n')).length > 0) break
+      }
     }
     if (textos.length === 0) return { texto: '', erro: 'zip_sem_pdf_texto' }
     return { texto: textos.join('\n') }
@@ -366,7 +378,7 @@ export async function processarEditalContato(
     // edital — ex.: anexos em outro formato). O primeiro PDF com texto vence.
     // Orçamento de ~12s por edital para não estourar o limite de CPU do Worker,
     // e DPIs/scan enormes são rejeitados mais cedo pelo `extractPdfText`.
-    const deadline = Date.now() + 12_000
+    const deadline = Date.now() + 8_000
     let escolhido: ArquivoPncp | null = null
     let bytesPdf: Uint8Array | null = null
     let texto = ''
@@ -487,9 +499,10 @@ const CONSULTAS = [
   'servico',
 ]
 const MAX_PAGINAS = 8
-// Orçamento de requisições de busca por lote (evita estourar o tempo do Worker
-// quando as páginas iniciais já foram todas processadas).
-const MAX_FETCHES_BUSCA = 24
+// Orçamento de requisições de busca por lote (evita CPU/tempo alto no Worker).
+const MAX_FETCHES_BUSCA = 6
+// Orçamento TOTAL de tempo por chamada: para antes de estourar o Worker.
+const BUDGET_LOTE_MS = 18_000
 
 async function fetchSearch(q: string, pagina: number): Promise<SearchItemRaw[]> {
   const params = new URLSearchParams({
@@ -614,13 +627,16 @@ export async function executarLoteExtracao(client: AnyClient, limite: number): P
   const resumo: Record<string, number> = { ok: 0, sem_contato: 0, sem_arquivo: 0, pdf_invalido: 0, falha: 0 }
   const resultados: ResumoLote['resultados'] = []
 
+  const inicioLote = Date.now()
   for (const alvo of alvos) {
+    // Orçamento global: devolve o que já processou antes de estourar o Worker.
+    if (Date.now() - inicioLote > BUDGET_LOTE_MS) break
     // `forcar`: reprocessa mesmo havendo linha anterior (retenta falhas
     // transitórias registradas em edital_extracoes).
     const r = await processarEditalContato(client, alvo, { forcar: true })
     resumo[r.status] = (resumo[r.status] || 0) + 1
     resultados.push({ pncp_id: r.pncp_id, status: r.status, emails: r.emails, motivo: r.motivo || null })
-    await sleep(700)
+    await sleep(400)
   }
 
   return {

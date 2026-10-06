@@ -18,7 +18,7 @@ on:
       limite:
         description: 'Quantos editais processar (1-20)'
         required: false
-        default: '8'
+        default: '4'
 
 jobs:
   extrair-contatos:
@@ -39,7 +39,7 @@ jobs:
         env:
           PNCP_BASE_URL: ${{ secrets.PNCP_BASE_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          LIMITE: ${{ github.event.inputs.limite || '8' }}
+          LIMITE: ${{ github.event.inputs.limite || '4' }}
         run: |
           curl -sS --fail-with-body --retry 3 --retry-delay 5 --max-time 300 \
             -H "x-cron-secret: ${CRON_SECRET}" \
