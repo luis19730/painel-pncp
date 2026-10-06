@@ -486,7 +486,10 @@ const CONSULTAS = [
   'obra',
   'servico',
 ]
-const MAX_PAGINAS = 2
+const MAX_PAGINAS = 8
+// Orçamento de requisições de busca por lote (evita estourar o tempo do Worker
+// quando as páginas iniciais já foram todas processadas).
+const MAX_FETCHES_BUSCA = 24
 
 async function fetchSearch(q: string, pagina: number): Promise<SearchItemRaw[]> {
   const params = new URLSearchParams({
@@ -502,12 +505,16 @@ async function fetchSearch(q: string, pagina: number): Promise<SearchItemRaw[]> 
   for (const u of urls) {
     try {
       const resp = await fetch(u, { headers: BROWSER_HEADERS, signal: AbortSignal.timeout(20000) })
-      if (!resp.ok) continue
+      if (!resp.ok) {
+        console.warn(`[contatos] busca HTTP ${resp.status} em ${u.slice(0, 90)}`)
+        continue
+      }
       const data = await resp.json()
       const arr = Array.isArray(data) ? data : data?.items || data?.data || []
       if (Array.isArray(arr) && arr.length > 0) return arr as SearchItemRaw[]
-    } catch {
-      /* tenta a próxima fonte */
+      console.warn(`[contatos] busca vazia em ${u.slice(0, 90)}`)
+    } catch (e) {
+      console.warn(`[contatos] busca erro em ${u.slice(0, 90)}: ${(e as Error)?.message}`)
     }
   }
   return []
@@ -528,21 +535,26 @@ function itemParaAlvo(it: SearchItemRaw): EditalAlvo | null {
 }
 
 /**
- * Monta os alvos priorizando editais NUNCA vistos e, depois, falhas transitórias
- * (sem_arquivo/pdf_invalido/falha) para reprocessar. Editais com status
- * definitivo (ok/sem_contato) nunca se repetem.
+ * Monta os alvos priorizando editais NUNCA vistos e, só na falta deles, falhas
+ * TRANSITÓRIAS (download_falhou / tempo_esgotado / falha). Editais com status
+ * definitivo (ok, sem_contato, pdf_invalido de PDF digitalizado, sem_arquivo)
+ * nunca se repetem — do contrário consumiriam a fila para sempre.
  */
 async function buscarAlvos(
   definitivos: Set<string>,
   jaVistos: Set<string>,
+  retrySet: Set<string>,
   lim: number
 ): Promise<EditalAlvo[]> {
   const pool = Math.max(lim, 12)
   const novos = new Map<string, EditalAlvo>()
   const retries = new Map<string, EditalAlvo>()
+  let fetches = 0
 
   for (const q of CONSULTAS) {
     for (let pagina = 1; pagina <= MAX_PAGINAS; pagina++) {
+      if (fetches >= MAX_FETCHES_BUSCA) break
+      fetches++
       const items = await fetchSearch(q, pagina)
       if (items.length === 0) break
       for (const it of items) {
@@ -550,14 +562,14 @@ async function buscarAlvos(
         if (!alvo) continue
         if (definitivos.has(alvo.pncp_id)) continue
         if (jaVistos.has(alvo.pncp_id)) {
-          if (!retries.has(alvo.pncp_id)) retries.set(alvo.pncp_id, alvo)
+          if (retrySet.has(alvo.pncp_id) && !retries.has(alvo.pncp_id)) retries.set(alvo.pncp_id, alvo)
         } else if (!novos.has(alvo.pncp_id)) {
           novos.set(alvo.pncp_id, alvo)
         }
       }
       if (novos.size >= pool) break
     }
-    if (novos.size >= pool) break
+    if (novos.size >= pool || fetches >= MAX_FETCHES_BUSCA) break
   }
 
   return [...novos.values(), ...retries.values()].slice(0, lim)
@@ -572,23 +584,29 @@ async function buscarAlvos(
 export async function executarLoteExtracao(client: AnyClient, limite: number): Promise<ResumoLote> {
   const lim = Math.min(20, Math.max(1, Math.floor(limite) || 1))
 
-  // `jaVistos` = todo edital com linha em edital_extracoes; `definitivos` =
-  // só os resolvidos (ok/sem_contato), que não devem ser repetidos.
+  // `jaVistos` = todo edital com linha em edital_extracoes; `definitivos` = os
+  // que NÃO devem repetir (ok, sem_contato, PDF digitalizado/sem texto,
+  // sem arquivo); `retrySet` = falhas transitórias que valem nova tentativa.
   const jaVistos = new Set<string>()
   const definitivos = new Set<string>()
+  const retrySet = new Set<string>()
   try {
-    const { data } = await client.from('edital_extracoes').select('pncp_id,status').limit(20000)
+    const { data } = await client.from('edital_extracoes').select('pncp_id,status,motivo').limit(20000)
     for (const r of data || []) {
       const id = String(r.pncp_id || '')
       if (!id) continue
       jaVistos.add(id)
-      if (r.status === 'ok' || r.status === 'sem_contato') definitivos.add(id)
+      const motivo = String(r.motivo || '')
+      const transitorio =
+        r.status === 'falha' || motivo === 'download_falhou' || motivo === 'tempo_esgotado'
+      if (transitorio) retrySet.add(id)
+      else definitivos.add(id)
     }
   } catch {
     /* segue sem cache */
   }
 
-  const alvos = await buscarAlvos(definitivos, jaVistos, lim)
+  const alvos = await buscarAlvos(definitivos, jaVistos, retrySet, lim)
   if (alvos.length === 0) {
     return { limite: lim, candidatos: 0, processados: 0, emails_extraidos: 0, resumo: {}, resultados: [] }
   }
