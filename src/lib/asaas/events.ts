@@ -9,15 +9,14 @@
 // ============================================================================
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { getPlano } from '@/lib/planos/db'
-import { atualizarStatusAssinatura } from '@/lib/planos/db'
-import { setPlanoManual } from '@/lib/planos/db'
-import type { MetodoPagamento, StatusPagamento, CicloAssinatura, PlanoNome } from '@/lib/planos/plano'
+import { getPlano, atualizarStatusAssinatura, ativarAssinaturaPorPagamento } from '@/lib/planos/db'
+import type { MetodoPagamento, CicloAssinatura, PlanoNome } from '@/lib/planos/plano'
 import { proximaCobrancaIso } from '@/lib/planos/plano'
-import { cicloById } from '@/lib/asaas/types'
 import { linkPorValor } from '@/lib/asaas/links'
 import { getAsaasCustomer } from '@/lib/asaas/client'
 import { registrarEvento } from '@/lib/analytics-server'
+import { adminEmailList } from '@/lib/auth/admin-emails'
+import { sendEmail } from '@/lib/alerts/notifications/email'
 
 type AnyClient = SupabaseClient<any, 'public', any>
 
@@ -108,6 +107,83 @@ async function emailDoPagamento(payload: AsaasEventPayload): Promise<string | nu
 }
 
 /**
+ * Interpreta o `payment.externalReference` gravado no checkout/assinatura:
+ *   user:<uuid>:<plano>:<ciclo>   →  ex.: user:143fcf89-…:pro:mensal
+ * É o vínculo MAIS confiável entre o pagamento e o usuário/plano (o ASAAS
+ * devolve esse campo em todo evento de pagamento).
+ */
+export function parseExternalReference(ref?: string | null): {
+  userId?: string
+  plano?: PlanoNome
+  ciclo?: CicloAssinatura
+} {
+  if (!ref || typeof ref !== 'string') return {}
+  const m = ref.match(/user:([0-9a-fA-F-]{36})(?::([A-Za-z_]+))?(?::([a-z]+))?/)
+  if (!m) return {}
+  const planoRaw = (m[2] || '').toLowerCase()
+  const cicloRaw = (m[3] || '').toLowerCase()
+  const plano: PlanoNome | undefined =
+    planoRaw === 'empresa' || planoRaw === 'business'
+      ? 'business'
+      : planoRaw === 'pro'
+        ? 'pro'
+        : undefined
+  const ciclo: CicloAssinatura | undefined = (
+    ['mensal', 'trimestral', 'semestral', 'anual'] as const
+  ).includes(cicloRaw as CicloAssinatura)
+    ? (cicloRaw as CicloAssinatura)
+    : undefined
+  return { userId: m[1], plano, ciclo }
+}
+
+/**
+ * Avisa o administrador (ADMIN_EMAILS — inclui luis19730@gmail.com) que houve
+ * um pagamento. Best-effort: nunca lança e nunca bloqueia o webhook.
+ */
+async function notificarAdminPagamento(input: {
+  evento: string
+  valor?: number | string | null
+  plano?: string | null
+  ciclo?: string | null
+  metodo?: string | null
+  userId?: string | null
+  emailComprador?: string | null
+  customerId?: string | null
+  subscriptionId?: string | null
+  vinculado: boolean
+}): Promise<void> {
+  try {
+    const to = adminEmailList()
+    if (to.length === 0) return
+    const valor =
+      input.valor != null ? `R$ ${Number(input.valor).toFixed(2).replace('.', ',')}` : '—'
+    const assunto = input.vinculado
+      ? `Pagamento recebido: ${valor} — ${input.plano ?? 'plano'} (${input.ciclo ?? '—'})`
+      : `Pagamento SEM vinculo: ${valor} — associar manualmente`
+    const linhas: Array<[string, string]> = [
+      ['Evento', input.evento],
+      ['Valor', valor],
+      ['Plano', input.plano ?? '—'],
+      ['Ciclo', input.ciclo ?? '—'],
+      ['Metodo', input.metodo ?? '—'],
+      ['Usuario (id)', input.userId ?? '—'],
+      ['E-mail do comprador', input.emailComprador ?? '—'],
+      ['Customer ASAAS', input.customerId ?? '—'],
+      ['Assinatura ASAAS', input.subscriptionId ?? '—'],
+      ['Acesso liberado', input.vinculado ? 'SIM' : 'NAO (vincular manualmente)'],
+    ]
+    const html = `<h2>${assunto}</h2><table cellpadding="6" border="0">${linhas
+      .map(([k, v]) => `<tr><td><b>${k}</b></td><td>${v}</td></tr>`)
+      .join('')}</table>`
+    const text = linhas.map(([k, v]) => `${k}: ${v}`).join('\n')
+    const r = await sendEmail({ to, subject: assunto, html, text })
+    if (!r.ok) console.error('[asaas-webhook] falha ao notificar admin:', r.erro)
+  } catch (e) {
+    console.error('[asaas-webhook] erro ao notificar admin:', (e as Error)?.message)
+  }
+}
+
+/**
  * Processa um evento. Retorna { handled: true } quando o evento foi reconhecido
  * e o banco atualizado, ou { handled: false } para eventos ignorados/desconhecidos.
  */
@@ -128,96 +204,101 @@ export async function processAsaasEvent(
     subscriptionId: subscription?.id || payment?.subscription || null,
     customerId: payment?.customer || subscription?.customer || null,
   }
-  let rec = await findByAsaasRef(client, refs)
-
-  // Fluxo de Link de Pagamento ASAAS: não existe subscription/asaas ref no app.
-  // O vínculo é feito pelo E-MAIL do comprador (igual ao cadastro do Painel).
-  // Ignoramos um customerId que seja apenas um id de string cru quando o payload
-  // não o associa a nada: só tentamos o fallback por e-mail em pagamentos pagos.
-  const isLinkPayment = !rec && !subscription && !!refs.customerId
-
-  if (!rec) {
-    const email = await emailDoPagamento(payload)
-    rec = await findByEmail(client, email)
-    if (isLinkPayment && rec && (paymentStatus === 'CONFIRMED' || paymentStatus === 'RECEIVED')) {
-      const userId = rec.user_id as string
-      // Resolve plano × periodicidade pelo VALOR pago (cada link tem valor único).
-      let valorCents = Math.round(Number(payment?.value || 0) * 100)
-      if (Number.isNaN(valorCents) || valorCents <= 0) {
-        // tenta a partir de payment.value como string "19.90"
-        const v = parseFloat(String(payment?.value || ''))
-        valorCents = Number.isNaN(v) ? 0 : Math.round(v * 100)
-      }
-      const link = linkPorValor(valorCents)
-      if (link) {
-        const planoDb: PlanoNome = link.plano === 'empresa' ? 'business' : 'pro'
-        const cic = cicloById(link.ciclo)
-        const cicloDb: CicloAssinatura = (cic?.id as CicloAssinatura) || 'mensal'
-        const lastPaymentAt = new Date().toISOString()
-        const proxima = proximaCobrancaIso(lastPaymentAt, cicloDb)
-        // Atualiza o plano (pro/business) e ativa a assinatura via link.
-        await setPlanoManual(client, userId, planoDb)
-        await atualizarStatusAssinatura(client, userId, {
-          status: 'active',
-          paymentMethod: payment?.billingType === 'PIX' ? 'pix' : 'credit_card',
-          nextDueDate: proxima,
-          lastPaymentAt,
-          // Período de uso (fim do acesso) conta a partir da data do pagamento.
-          trialFim: proxima,
-        })
-        // Persiste ciclo e customer id do link para futuras renovações.
-        await client.from('user_planos').update({
-          ciclo: link.ciclo,
-          asaas_customer_id: typeof refs.customerId === 'string' ? refs.customerId : (refs.customerId as any)?.id || undefined,
-          updated_at: new Date().toISOString(),
-        }).eq('user_id', userId)
-
-        await registrarEvento(client, {
-          event: 'payment_confirmed',
-          user_id: userId,
-          page: 'checkout',
-          props: { valor: payment?.value ?? null, origem: 'link' },
-        })
-        return { handled: true, detail: 'link_pago' }
-      }
-      return { handled: true, detail: 'link_pago_sem_mapeamento_de_plano' }
-    }
-  }
-
-  if (!rec) {
-    // Evento sem assinatura mapeada: ainda assim consumido (idempotência),
-    // mas não há banco a alterar.
-    return { handled: true, detail: 'sem_assinatura_mapeada' }
-  }
-  const userId = rec.user_id as string
+  const customerIdStr = typeof refs.customerId === 'string' ? refs.customerId : null
+  const subscriptionIdStr = typeof refs.subscriptionId === 'string' ? refs.subscriptionId : null
 
   const nowIso = new Date().toISOString()
   const nextDueDate = subscription?.nextDueDate || payment?.dueDate || null
 
-  // ---- Pagamento confirmado/recebido → ASSINATURA ATIVA ----
-  if (paymentStatus === 'CONFIRMED' || paymentStatus === 'RECEIVED') {
-    const lastPaymentAt = nowIso
-    // Próxima renovação = pagamento + ciclo em MESES de calendário (1/3/6/12),
-    // NÃO dias fixos (30/90/180/365). Ex.: 31/01 + 1 mês → 28/02.
-    const cicloId = (rec?.ciclo || 'mensal') as CicloAssinatura
-    const proxima = proximaCobrancaIso(lastPaymentAt, cicloId)
-    await atualizarStatusAssinatura(client, userId, {
-      status: 'active',
-      paymentMethod,
-      nextDueDate: proxima,
-      lastPaymentAt,
-      // Período de uso (fim do acesso) conta a partir da data do pagamento:
-      // pagou R$ 19,90 (mensal) → +1 mês de uso, e assim por diante.
-      trialFim: proxima,
-    })
-    await registrarEvento(client, {
-      event: 'payment_confirmed',
-      user_id: userId,
-      page: 'checkout',
-      props: { valor: payment?.value ?? null, billingType: payment?.billingType ?? null },
-    })
-    return { handled: true, detail: 'pago' }
+  // ---- Resolve o usuário (ordem de confiabilidade) ----
+  //   1) payment.externalReference = "user:<uuid>:<plano>:<ciclo>" (checkout);
+  //   2) ids ASAAS já gravados em user_planos (subscription/customer);
+  //   3) e-mail do comprador (Link de Pagamento).
+  const xref = parseExternalReference(payment?.externalReference)
+  let rec = xref.userId ? await getPlano(client, xref.userId) : null
+  if (!rec) rec = await findByAsaasRef(client, refs)
+  let emailComprador: string | null = null
+  if (!rec) {
+    emailComprador = await emailDoPagamento(payload)
+    rec = await findByEmail(client, emailComprador)
   }
+  const resolvidoUserId = xref.userId || ((rec?.user_id as string | undefined) ?? undefined)
+
+  const valorCents = Math.round(Number(payment?.value ?? 0) * 100) || 0
+  const link = linkPorValor(valorCents)
+
+  // ---- PAGAMENTO CONFIRMADO/RECEBIDO → LIBERA/RENOVA O ACESSO ----
+  if (paymentStatus === 'CONFIRMED' || paymentStatus === 'RECEIVED') {
+    const planoFinal: PlanoNome =
+      xref.plano ||
+      (rec?.plano && rec.plano !== 'free' ? (rec.plano as PlanoNome) : undefined) ||
+      (link ? (link.plano === 'empresa' ? 'business' : 'pro') : undefined) ||
+      'pro'
+    const cicloFinal: CicloAssinatura =
+      xref.ciclo ||
+      ((rec?.ciclo as CicloAssinatura | undefined) ?? undefined) ||
+      (link ? (link.ciclo as CicloAssinatura) : undefined) ||
+      'mensal'
+    // Período de uso = data do pagamento + ciclo em MESES de calendário.
+    const proxima = proximaCobrancaIso(nowIso, cicloFinal)
+
+    if (resolvidoUserId) {
+      await ativarAssinaturaPorPagamento(client, resolvidoUserId, {
+        plano: planoFinal,
+        ciclo: cicloFinal,
+        paymentMethod,
+        lastPaymentAt: nowIso,
+        proxima,
+        asaasCustomerId: customerIdStr,
+        asaasSubscriptionId: subscriptionIdStr,
+      })
+      await registrarEvento(client, {
+        event: 'payment_confirmed',
+        user_id: resolvidoUserId,
+        page: 'checkout',
+        props: {
+          valor: payment?.value ?? null,
+          plano: planoFinal,
+          ciclo: cicloFinal,
+          billingType: payment?.billingType ?? null,
+        },
+      })
+      await notificarAdminPagamento({
+        evento: event,
+        valor: payment?.value ?? null,
+        plano: planoFinal,
+        ciclo: cicloFinal,
+        metodo: paymentMethod,
+        userId: resolvidoUserId,
+        emailComprador,
+        customerId: customerIdStr,
+        subscriptionId: subscriptionIdStr,
+        vinculado: true,
+      })
+      return { handled: true, detail: 'pago_liberado' }
+    }
+
+    // Pagamento confirmado sem vínculo: avisa o admin para associar manualmente.
+    await notificarAdminPagamento({
+      evento: event,
+      valor: payment?.value ?? null,
+      plano: link?.plano ?? null,
+      ciclo: link?.ciclo ?? null,
+      metodo: paymentMethod,
+      userId: null,
+      emailComprador,
+      customerId: customerIdStr,
+      subscriptionId: subscriptionIdStr,
+      vinculado: false,
+    })
+    return { handled: true, detail: 'pago_sem_vinculo' }
+  }
+
+  if (!rec) {
+    // Evento sem assinatura mapeada: consumido (idempotência), sem alteração.
+    return { handled: true, detail: 'sem_assinatura_mapeada' }
+  }
+  const userId = rec.user_id as string
 
   // ---- Pagamento criado (ainda pendente) automaticamente ----
   if (paymentStatus === 'PENDING' || paymentStatus === 'CREATED') {

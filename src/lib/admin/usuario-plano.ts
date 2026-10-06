@@ -41,6 +41,10 @@ export interface UsuarioComPlano {
   /** Campanha de reativação: e-mail de recuperação pós-trial já enviado. */
   emailReativacaoEnviado: boolean
   emailReativacaoEnviadoAt: string | null
+  /** Cliente PAGANTE (assinatura ASAAS ativa ou plano pago concedido manual). */
+  pago: boolean
+  /** Acesso ENCERRADO (trial expirado/bloqueado, sem plano pago ativo). */
+  expirado: boolean
 }
 
 /**
@@ -76,6 +80,13 @@ export async function listarUsuariosComPlano(
       const planoId = info.plano === 'business' ? 'empresa' : 'pro'
       const cic = cicloById(info.cicloAssinatura || 'mensal') || cicloById('mensal')!
       const valorCiclo = precoCiclo(planoId, cic.id)
+      // Pagante = assinatura ASAAS ATIVA OU plano pago (pro/business) fora do
+      // trial. O trial de checkout (origem 'asaas' + status 'trial') NÃO conta
+      // como pagante até a primeira cobrança confirmada.
+      const pago =
+        info.statusPagamento === 'active' ||
+        (info.acessoPermitido && info.plano !== 'free' && info.origem === 'manual')
+      const expirado = !info.acessoPermitido && !pago
       return {
         user_id: u.id,
         email: u.email || '—',
@@ -104,8 +115,15 @@ export async function listarUsuariosComPlano(
         diasParaCobranca30d: cobranca.diasParaCobranca,
         emailReativacaoEnviado: !!rec?.email_reactivation_sent,
         emailReativacaoEnviadoAt: rec?.email_reactivation_sent_at || null,
+        pago,
+        expirado,
       }
     })
     .filter((u) => !filtro || u.email.toLowerCase().includes(filtro))
-    .sort((a, b) => (a.criado_em || '').localeCompare(b.criado_em || ''))
+    // ORDEM da aba Usuários: 1) clientes PAGANTES no topo; 2) em teste;
+    // 3) EXPIRADOS no fim. Dentro de cada grupo, por data de cadastro.
+    .sort((a, b) => {
+      const tier = (u: UsuarioComPlano) => (u.pago ? 0 : u.acessoPermitido ? 1 : 2)
+      return tier(a) - tier(b) || (a.criado_em || '').localeCompare(b.criado_em || '')
+    })
 }

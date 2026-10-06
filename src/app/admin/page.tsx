@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import {
   X, Database, Trash2, BarChart3, Wallet, HeartPulse, Target,
   Users, Activity, Eye, TrendingUp, Search, MousePointerClick,
-  Lock, RefreshCw, LogOut, FileText, ShieldCheck, CreditCard, CalendarClock, Mail,
+  Lock, RefreshCw, RotateCcw, LogOut, FileText, ShieldCheck, CreditCard, CalendarClock, Mail,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import StatCard from '@/components/ui/stat-card'
@@ -194,6 +194,10 @@ interface UsuarioPlano {
   diasParaCobranca30d?: number | null
   emailReativacaoEnviado?: boolean
   emailReativacaoEnviadoAt?: string | null
+  /** Cliente pagante (ASAAS ativo ou plano pago manual). */
+  pago?: boolean
+  /** Acesso encerrado (trial expirado/bloqueado). */
+  expirado?: boolean
 }
 
 const STATUS_FILTROS = ['todos', 'trial', 'active', 'payment_pending', 'overdue', 'canceled', 'blocked'] as const
@@ -291,6 +295,7 @@ export default function AdminPage() {
   const [excluirSenha, setExcluirSenha] = useState('')
   const [excluindo, setExcluindo] = useState(false)
   const [retroativando, setRetroativando] = useState(false)
+  const [reprocessando, setReprocessando] = useState(false)
 
   const headers = (): HeadersInit => ({ 'x-admin-password': adminPwd })
 
@@ -635,6 +640,26 @@ export default function AdminPage() {
     }
   }
 
+  const reprocessarPagamentos = async () => {
+    if (!window.confirm('Reprocessar os pagamentos confirmados/recebidos do ASAAS e religar acesso/plano/prazo?')) return
+    setReprocessando(true)
+    setErro('assinaturas', '')
+    try {
+      const res = await fetch('/api/admin/asaas/reprocessar', { method: 'POST', headers: headers() })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) {
+        setErro('assinaturas', data?.erro || 'Não foi possível reprocessar os pagamentos.', res)
+        return
+      }
+      window.alert(`Pagamentos reprocessados: ${data.reprocessados}.`)
+      await Promise.all([loadTab('assinaturas'), loadTab('usuarios'), loadTab('receita')])
+    } catch {
+      setErro('assinaturas', 'Falha de conexão com o servidor.')
+    } finally {
+      setReprocessando(false)
+    }
+  }
+
   const openDetail = async (tipo: string) => {
     setDetail({ tipo })
     setDetailData(null)
@@ -856,9 +881,12 @@ export default function AdminPage() {
           <AssinaturasTab
             data={assinaturas}
             loading={carregando === 'assinaturas' && !assinaturas}
+            erro={erros.assinaturas || ''}
             filtroStatus={filtroStatus}
             onFiltroStatus={setFiltroStatus}
             onAtualizar={() => void loadTab('assinaturas')}
+            onReprocessar={reprocessarPagamentos}
+            reprocessando={reprocessando}
           />
         ) : tab === 'receita' ? (
           <ReceitaTab data={receita} loading={carregando === 'receita' && !receita} />
@@ -1337,7 +1365,7 @@ function UsuariosTab({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <PageHeader
           title="Usuários e Planos"
-          description="E-mail, plano escolhido e status do teste de 15 dias (tabela user_planos + auth.users)."
+          description="Clientes PAGANTES primeiro (destacados), depois em teste, e os EXPIRADOS no fim. Fonte: user_planos + auth.users."
           badge={<Badge variant="accent"><ShieldCheck className="w-3.5 h-3.5" /> Gestão de planos</Badge>}
         />
         <div className="sm:shrink-0 flex items-center gap-2 flex-wrap">
@@ -1405,10 +1433,20 @@ function UsuariosTab({
                 </thead>
                 <tbody>
                   {usuarios.map((u) => (
-                    <tr key={u.user_id} className="border-b border-slate-100 dark:border-slate-800/60 align-middle">
+                    <tr
+                      key={u.user_id}
+                      className={`border-b border-slate-100 dark:border-slate-800/60 align-middle ${
+                        u.pago
+                          ? 'bg-emerald-50/60 dark:bg-emerald-500/5'
+                          : u.expirado
+                            ? 'opacity-70'
+                            : ''
+                      }`}
+                    >
                       <td className="py-3 pr-4 text-slate-800 dark:text-slate-200">
                         <div className="flex items-center gap-2">
                           <span className="truncate max-w-[220px]">{u.email}</span>
+                          {u.pago && <Badge variant="success">PAGO</Badge>}
                           {u.semRegistro && <Badge variant="accent">sem plano</Badge>}
                         </div>
                       </td>
@@ -1430,6 +1468,8 @@ function UsuariosTab({
                       <td className="py-3 pr-4">
                         {u.bloqueado ? (
                           <Badge variant="danger">Bloqueado</Badge>
+                        ) : u.pago ? (
+                          <Badge variant="success">Cliente pagante</Badge>
                         ) : u.semRegistro ? (
                           <Badge variant="accent">Sem registro</Badge>
                         ) : u.statusTrial === 'em_teste' ? (
@@ -1524,15 +1564,21 @@ function UsuariosTab({
 function AssinaturasTab({
   data,
   loading,
+  erro,
   filtroStatus,
   onFiltroStatus,
   onAtualizar,
+  onReprocessar,
+  reprocessando,
 }: {
   data: AssinaturasData | null
   loading: boolean
+  erro: string
   filtroStatus: string
   onFiltroStatus: (v: string) => void
   onAtualizar: () => void
+  onReprocessar: () => void
+  reprocessando: boolean
 }) {
   const assinaturas = data?.assinaturas || []
   const filtradas = filtroStatus === 'todos' ? assinaturas : assinaturas.filter((u) => u.statusPagamento === filtroStatus)
@@ -1558,12 +1604,22 @@ function AssinaturasTab({
               </option>
             ))}
           </select>
+          <Button variant="ghost" onClick={onReprocessar} disabled={reprocessando} loading={reprocessando}>
+            <RotateCcw className="w-4 h-4" />
+            Reprocessar pagamentos
+          </Button>
           <Button variant="secondary" onClick={onAtualizar} disabled={loading} loading={loading}>
             <RefreshCw className="w-4 h-4" />
             Atualizar
           </Button>
         </div>
       </div>
+
+      {erro && (
+        <div className="px-4 py-3 rounded-xl bg-danger-soft dark:bg-red-500/10 border border-danger/20 text-sm text-danger">
+          {erro}
+        </div>
+      )}
 
       {data && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">

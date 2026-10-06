@@ -297,6 +297,52 @@ export async function iniciarAssinaturaTrial(
   if (error) throw error
 }
 
+/**
+ * Ativa/RENOVA a assinatura a partir de um PAGAMENTO confirmado do ASAAS.
+ *
+ * Fonte única da regra "pagou → libera": grava o plano (pro/business), a
+ * periodicidade (ciclo), as referências ASAAS e — o principal — define o fim do
+ * período de uso (`trial_fim`) como a data do pagamento + o ciclo contratado
+ * (mensal → +1 mês, anual → +12 meses etc.). Assim o acesso é liberado/estendido
+ * automaticamente, e o plano sobe para PRO ou BUSINESS conforme o que foi pago.
+ */
+export async function ativarAssinaturaPorPagamento(
+  client: AnyClient,
+  userId: string,
+  input: {
+    plano: PlanoNome
+    ciclo: CicloAssinatura
+    paymentMethod: MetodoPagamento
+    lastPaymentAt: string
+    proxima: string
+    asaasCustomerId?: string | null
+    asaasSubscriptionId?: string | null
+  }
+): Promise<void> {
+  const plano = input.plano === 'free' ? 'pro' : input.plano
+  const { error } = await client.from('user_planos').upsert(
+    {
+      user_id: userId,
+      plano,
+      origem: 'asaas',
+      status_pagamento: 'active',
+      payment_method: input.paymentMethod,
+      ciclo: input.ciclo,
+      last_payment_at: input.lastPaymentAt,
+      next_due_date: input.proxima,
+      trial_inicio: input.lastPaymentAt,
+      trial_fim: input.proxima,
+      canceled_at: null,
+      bloqueado: false,
+      ...(input.asaasCustomerId ? { asaas_customer_id: input.asaasCustomerId } : {}),
+      ...(input.asaasSubscriptionId ? { asaas_subscription_id: input.asaasSubscriptionId } : {}),
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'user_id' }
+  )
+  if (error) throw error
+}
+
 /** Atualiza o status da assinatura ASAAS (sem alterar plano/origem). */
 export async function atualizarStatusAssinatura(
   client: AnyClient,

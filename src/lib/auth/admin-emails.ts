@@ -23,3 +23,8 @@ export function isAdminEmail(email: string | null | undefined): boolean {
   const normalized = email.trim().toLowerCase()
   return adminEmails().includes(normalized)
 }
+
+/** Lista os e-mails de administradores (usada em notificações operacionais). */
+export function adminEmailList(): string[] {
+  return adminEmails()
+}
