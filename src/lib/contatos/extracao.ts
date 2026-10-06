@@ -18,11 +18,14 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { extractPdfText, MAX_PDF_BYTES } from '@/lib/ia/pdf'
-import { searchLiveOpportunities } from '@/lib/pncp-data'
 
 type AnyClient = SupabaseClient<any, 'public', any>
 
 const PNCP_BASE = process.env.NEXT_PUBLIC_PNCP_BASE || 'https://pncp.gov.br/api'
+// Proxy público do projeto (mesmo usado pelo app): evita o WAF do PNCP quando a
+// chamada parte do datacenter (Cloudflare Worker).
+const PNCP_PROXY =
+  process.env.NEXT_PUBLIC_PNCP_PROXY || 'https://pncp-proxy.luis19730.workers.dev'
 
 const BROWSER_HEADERS: Record<string, string> = {
   'User-Agent':
@@ -111,16 +114,22 @@ function parsePncpId(pncpId: string): { cnpj: string; seq: string; ano: string }
 }
 
 async function listarArquivos(cnpj: string, ano: string, seq: string): Promise<ArquivoPncp[]> {
-  const url = `${PNCP_BASE}/pncp/v1/orgaos/${cnpj}/compras/${ano}/${seq}/arquivos`
-  try {
-    const resp = await fetch(url, { headers: BROWSER_HEADERS, signal: AbortSignal.timeout(15000) })
-    if (!resp.ok) return []
-    const data = await resp.json()
-    const arr = Array.isArray(data) ? data : data?.data || []
-    return Array.isArray(arr) ? (arr as ArquivoPncp[]) : []
-  } catch {
-    return []
+  const path = `/pncp/v1/orgaos/${cnpj}/compras/${ano}/${seq}/arquivos`
+  // Direto pode dar timeout a partir do datacenter (WAF); o proxy público do
+  // projeto costuma responder — por isso tentamos as duas fontes.
+  const urls = [ `${PNCP_BASE}${path}`, `${PNCP_PROXY.replace(/\/$/, '')}${path}` ]
+  for (const url of urls) {
+    try {
+      const resp = await fetch(url, { headers: BROWSER_HEADERS, signal: AbortSignal.timeout(20000) })
+      if (!resp.ok) continue
+      const data = await resp.json()
+      const arr = Array.isArray(data) ? data : data?.data || []
+      if (Array.isArray(arr) && arr.length > 0) return arr as ArquivoPncp[]
+    } catch {
+      /* tenta a próxima fonte */
+    }
   }
+  return []
 }
 
 /** Ordena os arquivos priorizando o documento "Edital". */
@@ -133,6 +142,9 @@ function ordenarArquivos(arquivos: ArquivoPncp[]): ArquivoPncp[] {
   ]
 }
 
+// ZIP pode embalar o edital (PDF) e ser bem maior que 3 MB.
+const MAX_ZIP_BYTES = 30 * 1024 * 1024
+
 async function baixarArquivo(url: string): Promise<{ bytes?: Uint8Array; erro?: string }> {
   const tentativas = [url]
   const proxy = process.env.PNCP_ARQUIVO_PROXY
@@ -141,19 +153,86 @@ async function baixarArquivo(url: string): Promise<{ bytes?: Uint8Array; erro?: 
   }
   for (const u of tentativas) {
     try {
-      const resp = await fetch(u, { headers: BROWSER_HEADERS, signal: AbortSignal.timeout(25000) })
+      const resp = await fetch(u, { headers: BROWSER_HEADERS, signal: AbortSignal.timeout(30000) })
       if (!resp.ok) continue
       const buf = new Uint8Array(await resp.arrayBuffer())
       if (buf.length === 0) continue
       const isPdf = buf[0] === 0x25 && buf[1] === 0x50 && buf[2] === 0x44 && buf[3] === 0x46
-      if (!isPdf) return { erro: 'nao_pdf' }
-      if (buf.length > MAX_PDF_BYTES) return { erro: 'pdf_grande' }
-      return { bytes: buf }
+      const isZip = buf[0] === 0x50 && buf[1] === 0x4b
+      if (isPdf) {
+        if (buf.length > MAX_PDF_BYTES) return { erro: 'pdf_grande' }
+        return { bytes: buf }
+      }
+      if (isZip) {
+        if (buf.length > MAX_ZIP_BYTES) return { erro: 'zip_grande' }
+        return { bytes: buf }
+      }
+      return { erro: 'nao_pdf' }
     } catch {
       // tenta a próxima alternativa
     }
   }
   return { erro: 'download_falhou' }
+}
+
+/**
+ * Lê um ZIP em memória (sem dependências) e devolve o texto dos PDFs internos.
+ * Implementação mínima: localiza o EOCD, percorre o diretório central, infla
+ * cada entrada `.pdf` com `DecompressionStream('deflate-raw')` e extrai o texto.
+ * ZIP64 não é suportado (raro nos editais).
+ */
+async function extrairTextoDeZip(bytes: Uint8Array): Promise<{ texto: string; erro?: string }> {
+  try {
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+    const minEocd = Math.max(0, bytes.length - 65557)
+    let eocd = -1
+    for (let i = bytes.length - 22; i >= minEocd; i--) {
+      if (view.getUint32(i, true) === 0x06054b50) {
+        eocd = i
+        break
+      }
+    }
+    if (eocd < 0) return { texto: '', erro: 'zip_sem_eocd' }
+
+    const total = view.getUint16(eocd + 10, true)
+    let off = view.getUint32(eocd + 16, true)
+    const dec = new TextDecoder('utf-8')
+    const textos: string[] = []
+
+    for (let n = 0; n < total; n++) {
+      if (off + 46 > bytes.length || view.getUint32(off, true) !== 0x02014b50) break
+      const method = view.getUint16(off + 10, true)
+      const compSize = view.getUint32(off + 20, true)
+      const nameLen = view.getUint16(off + 28, true)
+      const extraLen = view.getUint16(off + 30, true)
+      const commentLen = view.getUint16(off + 32, true)
+      const localOff = view.getUint32(off + 42, true)
+      const name = dec.decode(bytes.subarray(off + 46, off + 46 + nameLen))
+      off += 46 + nameLen + extraLen + commentLen
+      if (!/\.pdf$/i.test(name)) continue
+      if (localOff + 30 > bytes.length || view.getUint32(localOff, true) !== 0x04034b50) continue
+      const lNameLen = view.getUint16(localOff + 26, true)
+      const lExtraLen = view.getUint16(localOff + 28, true)
+      const dataStart = localOff + 30 + lNameLen + lExtraLen
+      const comp = bytes.subarray(dataStart, dataStart + compSize)
+      let pdfBytes: Uint8Array
+      if (method === 0) {
+        pdfBytes = comp
+      } else if (method === 8) {
+        const stream = new Blob([new Uint8Array(comp)]).stream().pipeThrough(new DecompressionStream('deflate-raw'))
+        pdfBytes = new Uint8Array(await new Response(stream).arrayBuffer())
+      } else {
+        continue
+      }
+      const ex = await extractPdfText(pdfBytes)
+      if (ex.ok && ex.text) textos.push(ex.text)
+      if (textos.join('\n').length > 400000) break
+    }
+    if (textos.length === 0) return { texto: '', erro: 'zip_sem_pdf_texto' }
+    return { texto: textos.join('\n') }
+  } catch (e) {
+    return { texto: '', erro: (e as Error)?.message || 'zip_erro' }
+  }
 }
 
 async function registrarExtracao(
@@ -302,6 +381,18 @@ export async function processarEditalContato(
         ultimoMotivo = d.erro || 'download_falhou'
         continue
       }
+      // ZIP (comum no PNCP): extrai o texto dos PDFs internos.
+      if (d.bytes[0] === 0x50 && d.bytes[1] === 0x4b) {
+        const z = await extrairTextoDeZip(d.bytes)
+        if (z.texto) {
+          escolhido = arquivo
+          bytesPdf = d.bytes
+          texto = z.texto
+          break
+        }
+        ultimoMotivo = z.erro || 'zip_sem_pdf_texto'
+        continue
+      }
       const ex = await extractPdfText(d.bytes)
       if (!ex.ok || !ex.text) {
         ultimoMotivo = ex.error || 'sem_texto'
@@ -370,50 +461,145 @@ export interface ResumoLote {
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 
+interface SearchItemRaw {
+  numero_controle_pncp?: string
+  orgao_cnpj?: string
+  orgao_nome?: string
+  uf?: string
+  municipio_nome?: string
+  numero_compra?: string
+  data_publicacao_pncp?: string
+}
+
+// A busca pública devolve ~10 itens por página e ignora `tamanho`, então UMA
+// consulta/1 página satura rapidamente. Varremos VÁRIAS consultas × páginas,
+// ordenando por data para sempre haver editais novos.
+const CONSULTAS = [
+  'licitacao',
+  'pregao',
+  'dispensa',
+  'concorrencia',
+  'credenciamento',
+  'aquisicao',
+  'contratacao',
+  'registro de precos',
+  'obra',
+  'servico',
+]
+const MAX_PAGINAS = 2
+
+async function fetchSearch(q: string, pagina: number): Promise<SearchItemRaw[]> {
+  const params = new URLSearchParams({
+    q,
+    tipos_documento: 'edital',
+    ordenacao: '-data',
+    pagina: String(pagina),
+  })
+  const urls = [
+    `${PNCP_BASE}/search/?${params}`,
+    `${PNCP_PROXY.replace(/\/$/, '')}/search/?${params}`,
+  ]
+  for (const u of urls) {
+    try {
+      const resp = await fetch(u, { headers: BROWSER_HEADERS, signal: AbortSignal.timeout(20000) })
+      if (!resp.ok) continue
+      const data = await resp.json()
+      const arr = Array.isArray(data) ? data : data?.items || data?.data || []
+      if (Array.isArray(arr) && arr.length > 0) return arr as SearchItemRaw[]
+    } catch {
+      /* tenta a próxima fonte */
+    }
+  }
+  return []
+}
+
+function itemParaAlvo(it: SearchItemRaw): EditalAlvo | null {
+  const id = String(it.numero_controle_pncp || '').trim()
+  if (!id || !it.orgao_cnpj) return null
+  return {
+    pncp_id: id,
+    orgao_cnpj: it.orgao_cnpj,
+    orgao_nome: it.orgao_nome || '',
+    uf: it.uf || '',
+    municipio: it.municipio_nome || '',
+    numero: String(it.numero_compra || id),
+    data_publicacao: it.data_publicacao_pncp || null,
+  }
+}
+
 /**
- * Executa um LOTE de extração: busca editais ao vivo no PNCP, pula os já
- * processados (cache em `edital_extracoes`), processa até `limite` editais com
- * pausa entre downloads (rate limiting) e devolve o resumo. Nunca lança.
+ * Monta os alvos priorizando editais NUNCA vistos e, depois, falhas transitórias
+ * (sem_arquivo/pdf_invalido/falha) para reprocessar. Editais com status
+ * definitivo (ok/sem_contato) nunca se repetem.
+ */
+async function buscarAlvos(
+  definitivos: Set<string>,
+  jaVistos: Set<string>,
+  lim: number
+): Promise<EditalAlvo[]> {
+  const pool = Math.max(lim, 12)
+  const novos = new Map<string, EditalAlvo>()
+  const retries = new Map<string, EditalAlvo>()
+
+  for (const q of CONSULTAS) {
+    for (let pagina = 1; pagina <= MAX_PAGINAS; pagina++) {
+      const items = await fetchSearch(q, pagina)
+      if (items.length === 0) break
+      for (const it of items) {
+        const alvo = itemParaAlvo(it)
+        if (!alvo) continue
+        if (definitivos.has(alvo.pncp_id)) continue
+        if (jaVistos.has(alvo.pncp_id)) {
+          if (!retries.has(alvo.pncp_id)) retries.set(alvo.pncp_id, alvo)
+        } else if (!novos.has(alvo.pncp_id)) {
+          novos.set(alvo.pncp_id, alvo)
+        }
+      }
+      if (novos.size >= pool) break
+    }
+    if (novos.size >= pool) break
+  }
+
+  return [...novos.values(), ...retries.values()].slice(0, lim)
+}
+
+/**
+ * Executa um LOTE de extração: busca editais ao vivo no PNCP (várias consultas
+ * e páginas), pula os já resolvidos (ok/sem_contato), reprocessa falhas
+ * transitórias, processa até `limite` editais com pausa entre downloads e
+ * devolve o resumo. Nunca lança.
  */
 export async function executarLoteExtracao(client: AnyClient, limite: number): Promise<ResumoLote> {
   const lim = Math.min(20, Math.max(1, Math.floor(limite) || 1))
 
-  const processados = new Set<string>()
+  // `jaVistos` = todo edital com linha em edital_extracoes; `definitivos` =
+  // só os resolvidos (ok/sem_contato), que não devem ser repetidos.
+  const jaVistos = new Set<string>()
+  const definitivos = new Set<string>()
   try {
-    const { data } = await client.from('edital_extracoes').select('pncp_id').limit(10000)
-    for (const r of data || []) if (r.pncp_id) processados.add(String(r.pncp_id))
+    const { data } = await client.from('edital_extracoes').select('pncp_id,status').limit(20000)
+    for (const r of data || []) {
+      const id = String(r.pncp_id || '')
+      if (!id) continue
+      jaVistos.add(id)
+      if (r.status === 'ok' || r.status === 'sem_contato') definitivos.add(id)
+    }
   } catch {
     /* segue sem cache */
   }
 
-  const live = await searchLiveOpportunities('licitacao', {}, 1)
-  if (!live || live.length === 0) {
+  const alvos = await buscarAlvos(definitivos, jaVistos, lim)
+  if (alvos.length === 0) {
     return { limite: lim, candidatos: 0, processados: 0, emails_extraidos: 0, resumo: {}, resultados: [] }
-  }
-
-  const vistos = new Set<string>()
-  const alvos: EditalAlvo[] = []
-  for (const o of live) {
-    if (!o.id || !o.cnpj) continue
-    if (processados.has(o.id) || vistos.has(o.id)) continue
-    vistos.add(o.id)
-    alvos.push({
-      pncp_id: o.id,
-      orgao_cnpj: o.cnpj,
-      orgao_nome: o.orgao,
-      uf: o.uf,
-      municipio: o.municipio,
-      numero: o.numero,
-      data_publicacao: o.dataAbertura || null,
-    })
-    if (alvos.length >= lim) break
   }
 
   const resumo: Record<string, number> = { ok: 0, sem_contato: 0, sem_arquivo: 0, pdf_invalido: 0, falha: 0 }
   const resultados: ResumoLote['resultados'] = []
 
   for (const alvo of alvos) {
-    const r = await processarEditalContato(client, alvo)
+    // `forcar`: reprocessa mesmo havendo linha anterior (retenta falhas
+    // transitórias registradas em edital_extracoes).
+    const r = await processarEditalContato(client, alvo, { forcar: true })
     resumo[r.status] = (resumo[r.status] || 0) + 1
     resultados.push({ pncp_id: r.pncp_id, status: r.status, emails: r.emails, motivo: r.motivo || null })
     await sleep(700)
