@@ -92,6 +92,29 @@ async function trySearchUrl<T>(url: string): Promise<T[] | null> {
   }
 }
 
+/**
+ * Dispara VÁRIAS fontes em PARALELO e devolve o primeiro resultado NÃO-VAZIO.
+ *
+ * Motivo: o PNCP pode bloquear a chamada direta do navegador (WAF por IP/rede
+ * ou extensão/adblock) e o proxy externo pode estar lento; enquanto isso, a
+ * rota same-origin do próprio app (/api/pncp/...) costuma responder. Correndo
+ * em paralelo, os dados reais aparecem assim que UMA fonte responde, em vez de
+ * esperar a primeira falhar para só então tentar a próxima.
+ */
+async function tryUrlsFirst<T>(urls: string[]): Promise<T[] | null> {
+  const attempts = urls.map((u) =>
+    trySearchUrl<T>(u).then((r) =>
+      r && r.length > 0 ? r : Promise.reject(new Error('vazio'))
+    )
+  )
+  if (attempts.length === 0) return null
+  try {
+    return await Promise.any(attempts)
+  } catch {
+    return null
+  }
+}
+
 export interface LiveSearchOptions {
   uf?: string
   modalidade?: string
@@ -145,9 +168,8 @@ async function fetchPage(query: string, page: number, ufs?: string): Promise<PNC
   const proxyUrl = `${PNCP_PROXY.replace(/\/$/, '')}/search/?${params}`
   const appUrl = appProxyUrl('search', params)
 
-  let raw = await trySearchUrl<PNCPItem>(directUrl)
-  if (!raw || raw.length === 0) raw = await trySearchUrl<PNCPItem>(proxyUrl)
-  if (!raw || raw.length === 0) raw = await trySearchUrl<PNCPItem>(appUrl)
+  // Same-origin (o próprio app) primeiro para desempate; as três correm juntas.
+  const raw = await tryUrlsFirst<PNCPItem>([appUrl, directUrl, proxyUrl])
   return raw || []
 }
 
@@ -291,37 +313,36 @@ export function modalidadeCodesFromName(nome?: string): number[] {
 
 async function fetchConsultaPage(params: URLSearchParams): Promise<ConsultaRaw[]> {
   const qs = params.toString()
-  // ORDEM IMPORTANTE: o caminho que funciona no navegador é o DIRETO (o PNCP
-  // libera CORS * e o navegador envia fingerprint real — o WAF aceita). A rota
-  // same-origin exige sessão paga e o proxy externo é lento/instável, então
-  // vem depois. Antes o same-origin era o primeiro e fazia o indicador esperar
-  // o timeout server-side (WAF bloqueia o datacenter) antes de usar o direto.
-  const urls = [
-    `${PNCP_BASE}/consulta/v1/contratacoes/publicacao?${qs}`,
-    `/api/pncp/consulta?${qs}`,
-    `${PNCP_PROXY.replace(/\/$/, '')}/consulta/v1/contratacoes/publicacao?${qs}`,
+  // As três fontes correm em PARALELO e vence a primeira que trouxer dados:
+  //  1) rota same-origin do app (/api/pncp/consulta) — sem CORS/WAF/adblock;
+  //  2) PNCP direto (o navegador envia fingerprint real);
+  //  3) proxy externo (último recurso).
+  const candidates: Array<{ url: string; headers: Record<string, string>; timeout: number }> = [
+    { url: `/api/pncp/consulta?${qs}`, headers: { Accept: 'application/json' }, timeout: PROXY_TIMEOUT_MS },
+    {
+      url: `${PNCP_BASE}/consulta/v1/contratacoes/publicacao?${qs}`,
+      headers: { ...BROWSER_HEADERS },
+      timeout: REQUEST_TIMEOUT_MS,
+    },
+    {
+      url: `${PNCP_PROXY.replace(/\/$/, '')}/consulta/v1/contratacoes/publicacao?${qs}`,
+      headers: { 'User-Agent': 'Mozilla/5.0 PainelPNCP/1.0', Accept: 'application/json' },
+      timeout: PROXY_TIMEOUT_MS,
+    },
   ]
-  for (const u of urls) {
-    try {
-      // O proxy externo responde 404/timeout se receber o Referer do PNCP;
-      // o direto precisa dele só fora do navegador. Como isto roda no cliente,
-      // o navegador remove headers proibidos automaticamente — mantemos a
-      // chamada simples por fonte.
-      const headers: Record<string, string> = u.startsWith('/')
-        ? { Accept: 'application/json' }
-        : u.startsWith(PNCP_PROXY)
-          ? { 'User-Agent': 'Mozilla/5.0 PainelPNCP/1.0', Accept: 'application/json' }
-          : { ...BROWSER_HEADERS }
-      const resp = await fetch(u, { headers, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) })
-      if (!resp.ok) continue
-      const data = await resp.json()
-      const items: ConsultaRaw[] = data?.data || data?.items || []
-      if (Array.isArray(items) && items.length > 0) return items
-    } catch {
-      /* tenta a próxima */
-    }
+  const attempts = candidates.map(async (c) => {
+    const resp = await fetch(c.url, { headers: c.headers, signal: AbortSignal.timeout(c.timeout) })
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+    const data = await resp.json()
+    const items: ConsultaRaw[] = data?.data || data?.items || []
+    if (!Array.isArray(items) || items.length === 0) throw new Error('vazio')
+    return items
+  })
+  try {
+    return await Promise.any(attempts)
+  } catch {
+    return []
   }
-  return []
 }
 
 function mapConsultaItem(it: ConsultaRaw): Opportunity {
@@ -448,24 +469,26 @@ export async function searchLivePriceItems(
       if (!m) return { o, itens: [] as PncpItem[] }
       const [, cnpj, seq, ano] = m
       const path = `pncp/v1/orgaos/${cnpj}/compras/${ano}/${Number(seq)}/itens`
-      const urls = [`${PNCP_BASE}/${path}`, `/api/pncp/${path}`]
-      for (const u of urls) {
-        try {
-          const isProxyAux = u.startsWith('/api/pncp/')
-          const headers = isProxyAux
-            ? { 'User-Agent': 'Mozilla/5.0 PainelPNCP/1.0', Accept: 'application/json' }
-            : { ...BROWSER_HEADERS }
-          const timeout = isProxyAux ? PROXY_TIMEOUT_MS : REQUEST_TIMEOUT_MS
-          const resp = await fetch(u, { headers, signal: AbortSignal.timeout(timeout) })
-          if (!resp.ok) continue
-          const data = await resp.json()
-          const itens: PncpItem[] = Array.isArray(data) ? data : data?.data || []
-          if (Array.isArray(itens) && itens.length > 0) return { o, itens }
-        } catch {
-          /* tenta a próxima */
-        }
+      const urls = [`/api/pncp/${path}`, `${PNCP_BASE}/${path}`]
+      const attempts = urls.map(async (u) => {
+        const isProxyAux = u.startsWith('/api/pncp/')
+        const headers = isProxyAux
+          ? { 'User-Agent': 'Mozilla/5.0 PainelPNCP/1.0', Accept: 'application/json' }
+          : { ...BROWSER_HEADERS }
+        const timeout = isProxyAux ? PROXY_TIMEOUT_MS : REQUEST_TIMEOUT_MS
+        const resp = await fetch(u, { headers, signal: AbortSignal.timeout(timeout) })
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+        const data = await resp.json()
+        const itens: PncpItem[] = Array.isArray(data) ? data : data?.data || []
+        if (!Array.isArray(itens) || itens.length === 0) throw new Error('vazio')
+        return itens
+      })
+      try {
+        const itens = await Promise.any(attempts)
+        return { o, itens }
+      } catch {
+        return { o, itens: [] as PncpItem[] }
       }
-      return { o, itens: [] as PncpItem[] }
     })
   )
 

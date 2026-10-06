@@ -243,8 +243,17 @@ export async function GET(
 
   if (pathStr.startsWith('consulta')) {
     const params = new URLSearchParams(searchParams)
+    // O app usa o endpoint de PUBLICAÇÃO (retorna valorTotalEstimado,
+    // dataEncerramentoProposta e situacaoCompraNome). Antes o caminho era
+    // montado sem `/publicacao`, então esta rota respondia erro e o cliente
+    // caía na base local mesmo com o PNCP no ar.
+    const consultaPath = pathStr.includes('publicacao')
+      ? '/consulta/v1/contratacoes/publicacao'
+      : pathStr.replace(/^consulta\/?/, '').startsWith('v1')
+        ? `/${pathStr}`
+        : '/consulta/v1/contratacoes/publicacao'
     try {
-      const resp = await fetchComFallback(`/consulta/v1/contratacoes${pathStr.includes('publicacao') ? '/publicacao' : ''}`, params)
+      const resp = await fetchComFallback(consultaPath, params)
       if (!resp) {
         return NextResponse.json(
           { error: true, message: 'Erro ao consultar PNCP', items: [], total: 0 },
