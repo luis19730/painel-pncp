@@ -244,7 +244,7 @@ export default function CadastroForm() {
     <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-700 p-8 shadow-xl shadow-slate-200/40 dark:shadow-none">
       <h1 className="text-2xl font-extrabold font-display text-slate-900 dark:text-white mb-1">Criar minha conta</h1>
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-        Crie sua conta e utilize ferramentas inteligentes para pesquisar preços, analisar referências e gerar relatórios.
+        Crie sua conta e acompanhe suas licitações do edital ao resultado na Minha Estação — além de pesquisar preços, analisar referências e gerar relatórios.
       </p>
 
       {error && (

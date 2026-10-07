@@ -9,7 +9,7 @@ import {
   Sparkles, Layers, ShieldAlert,
   ListChecks, FileCheck, FolderOpen,
   Star, FileBarChart, Calendar,
-  Building2, Settings, HelpCircle, Type, Zap, Home
+  Building2, Settings, HelpCircle, Type, Zap, Home, LayoutGrid
 } from 'lucide-react'
 import { SICX } from '@/content/sicx'
 
@@ -62,6 +62,8 @@ const navGroups = [
   {
     label: 'ACOMPANHAR',
     items: [
+      { href: '/estacao', label: 'Minha Estação', icon: LayoutGrid },
+      { href: '/estacao/prazos', label: 'Prazos da estação', icon: Calendar },
       { href: '/meu-radar', label: 'Meu Radar', icon: Radar },
       { href: '/alertas', label: 'Alertas', icon: Bell },
       { href: '/favoritos', label: 'Favoritos', icon: Star },

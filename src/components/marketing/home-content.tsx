@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   Search, Target, TrendingUp, Bell, Radar, Sparkles,
   ArrowRight, Shield, Check, Gauge, Layers, FileBarChart, ExternalLink,
-  ClipboardList, History, SearchCheck, BarChart3, ListTree, FileText, Zap, Crosshair,
+  ClipboardList, History, SearchCheck, BarChart3, ListTree, FileText, Zap, Crosshair, LayoutGrid,
 } from 'lucide-react'
 import { searchLiveOpportunities, searchLivePriceData, priceStatsFromRecords } from '@/lib/pncp-data'
 import type { PriceStats } from '@/lib/market-data'
@@ -598,6 +598,7 @@ export default function HomeContent() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
             <FeatureCard icon={Target} title="Score de Oportunidade" desc="Metodologia transparente que identifica as melhores oportunidades para o seu perfil." />
+            <FeatureCard icon={LayoutGrid} title="Minha Estação" desc="Acompanhe suas licitações do edital ao resultado, com prazos, notas e checklist em um só lugar." />
             <FeatureCard icon={Radar} title="Radar Personalizado" desc="Filtros avançados por CNAE, região, valor e status." />
             <FeatureCard icon={Bell} title="Alertas Inteligentes" desc="Notificações quando novas oportunidades combinam com seu perfil." />
             <FeatureCard icon={TrendingUp} title="Preços Históricos" desc="Dados reais para fundamentar suas propostas." />

@@ -331,6 +331,42 @@ export const GUIAS: Guia[] = [
       { label: 'Modalidades da Lei 14.133/2021', href: '/ajuda/modalidades-lei-14133' },
     ],
   },
+  {
+    slug: 'minha-estacao',
+    titulo: 'Como usar a Minha Estação de Trabalho',
+    resumo:
+      'Acompanhe cada licitação do edital ao resultado: quadro (kanban), prazos, notas e checklist de habilitação em um só lugar.',
+    cta: { label: 'Abrir a Minha Estação', href: '/estacao' },
+    secoes: [
+      { titulo: 'O que é', itens: [
+        'É o seu espaço logado para trabalhar cada licitação até o fim, do edital ao resultado.',
+        'Em vez de perder editais em favoritos e planilhas, você acompanha tudo em um quadro por etapa.',
+      ] },
+      { titulo: 'Adicionar uma licitação', itens: [
+        'Na busca de editais, no card ou na página de detalhe, clique em "Adicionar à minha estação".',
+        'Ela entra na coluna "Em análise" e os prazos conhecidos (abertura da sessão e encerramento da proposta) são criados automaticamente.',
+        'Se você não estiver logado, o sistema pede o login e volta para o edital.',
+      ] },
+      { titulo: 'Trabalhar cada etapa', itens: [
+        'Arraste o cartão entre as colunas (Em análise, Preparando proposta, Proposta enviada, Aguardando resultado, Ganha, Perdida). No celular, use o seletor de etapa no cartão.',
+        'Abra a ficha do edital para registrar notas, marcar o checklist de habilitação e cadastrar prazos.',
+        'Use os atalhos "Analisar edital com IA" e "Pesquisa de preços" para aprofundar sem sair da estação.',
+      ] },
+      { titulo: 'Prazos e alertas', itens: [
+        'Os prazos aparecem com contagem regressiva (destacados em vermelho quando faltam menos de 48 horas).',
+        'A visão "Prazos da estação" agrupa tudo por dia (hoje, amanhã, esta semana, depois).',
+        'Você recebe um e-mail de alerta até 24 horas antes de cada prazo, com link direto para a estação.',
+      ] },
+      { titulo: 'Plano gratuito', itens: [
+        'O plano gratuito permite até 10 licitações ativas na estação.',
+        'Para liberar mais, finalize/arquive alguma ou faça upgrade — o limite é único e fica numa configuração do sistema.',
+      ] },
+    ],
+    relacionados: [
+      { label: 'Como participar do primeiro pregão', href: '/ajuda/primeiro-pregao' },
+      { label: 'Documentos de habilitação', href: '/ajuda' },
+    ],
+  },
 ]
 
 export function getGuia(slug: string): Guia | undefined {

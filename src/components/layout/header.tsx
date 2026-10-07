@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Search, Bell, User, Menu, X, LogOut, Sparkles } from 'lucide-react'
+import { Search, Bell, User, Menu, X, LogOut, Sparkles, LayoutGrid } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
@@ -92,6 +92,10 @@ export default function Header() {
               <Bell className="w-5 h-5" />
             </Link>
 
+            <Link href="/estacao" className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400" aria-label="Minha Estação" title="Minha Estação">
+              <LayoutGrid className="w-5 h-5" />
+            </Link>
+
             <Link
               href="/ia-licitacoes"
               className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-secondary to-accent text-white text-xs font-bold hover:opacity-90 transition-all"
@@ -172,6 +176,8 @@ function MobileNav({
       links: [
         { href: '/dashboard', label: 'Oportunidades' },
         { href: '/busca', label: 'Buscar' },
+        { href: '/estacao', label: 'Minha Estação' },
+        { href: '/estacao/prazos', label: 'Prazos da estação' },
         { href: '/meu-radar', label: 'Meu Radar' },
         { href: '/alertas', label: 'Alertas' },
       ],

@@ -8,6 +8,7 @@ import DataSourceNotice, { type DataSource } from '@/components/ui/data-source-n
 import EmptyState from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { CardSkeleton } from '@/components/ui/skeleton';
+import BotaoEstacao from '@/components/estacao/botao-estacao';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
 import { searchItems } from '@/lib/market-data';
 import type { ItemRecord } from '@/lib/market-data';
@@ -477,6 +478,24 @@ function LiveResultList({ items }: { items: Opportunity[] }) {
               </a>
               <span className="text-slate-400">{item.dataAbertura ? formatDate(item.dataAbertura) : '—'}</span>
             </div>
+          </div>
+          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <BotaoEstacao
+              compacto
+              item={{
+                numero_controle_pncp: item.id,
+                orgao: item.orgao,
+                cnpj_orgao: item.cnpj,
+                uf: item.uf,
+                municipio: item.municipio,
+                objeto: item.objeto,
+                modalidade: item.modalidade,
+                valor_estimado: item.valor ?? null,
+                data_abertura: item.dataAbertura ?? null,
+                data_encerramento_proposta: item.dataEncerramento ?? null,
+                link_pncp: href,
+              }}
+            />
           </div>
         </div>
         )

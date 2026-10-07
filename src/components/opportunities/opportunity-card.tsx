@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { MapPin, Building2, Calendar, Coins, ExternalLink } from 'lucide-react'
 import { ScoreBadge } from '@/components/opportunities/score-badge'
 import FavoriteButton from '@/components/opportunities/favorite-button'
+import BotaoEstacao from '@/components/estacao/botao-estacao'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatDate, getDaysUntil, getDeadlineColor, getStatusColor } from '@/lib/utils'
 import { buildPncpEditalUrl } from '@/lib/pncp'
@@ -88,6 +89,25 @@ export default function OpportunityCard({ item }: { item: any }) {
           Ver no PNCP
           <ExternalLink className="w-3.5 h-3.5" />
         </Link>
+      </div>
+
+      <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+        <BotaoEstacao
+          compacto
+          item={{
+            numero_controle_pncp: item.id,
+            orgao: item.orgao,
+            cnpj_orgao: item.cnpj,
+            uf: item.uf,
+            municipio: item.municipio,
+            objeto: item.objeto,
+            modalidade: item.modalidade,
+            valor_estimado: item.valor ?? null,
+            data_abertura: item.dataAbertura ?? null,
+            data_encerramento_proposta: item.dataEncerramento ?? null,
+            link_pncp: href,
+          }}
+        />
       </div>
     </div>
   )
