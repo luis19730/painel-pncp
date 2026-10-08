@@ -30,4 +30,7 @@
       "id": "8bb948ac1ff8446b8fdebce710c01d60"
     }
   ],
+  "triggers": {
+    "crons": []
+  },
 }
