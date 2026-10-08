@@ -290,10 +290,20 @@ export default function FichaEdital({ itemId, onRemovido }: { itemId: string; on
         </div>
       </div>
 
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 text-sm text-slate-600 dark:text-slate-300">
+        <b className="text-slate-800 dark:text-white">O que fazer aqui:</b>
+        <ol className="list-decimal ml-5 mt-1 space-y-0.5 text-xs">
+          <li>Analise o edital com IA (botão abaixo).</li>
+          <li>Marque no Checklist o que já está pronto.</li>
+          <li>Cadastre os Prazos — você recebe um e-mail 24h antes de cada um.</li>
+        </ol>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Notas */}
         <div className="card bg-white dark:bg-slate-900 dark:border-slate-800 p-5">
           <h2 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Notas</h2>
+          <p className="text-[11px] text-slate-400 -mt-2 mb-3">Registre decisões, valores negociados e pendências desta licitação.</p>
           <textarea value={novaNota} onChange={(e) => setNovaNota(e.target.value)} rows={3} placeholder="Anote algo sobre esta licitação..." className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm" />
           <button onClick={addNota} disabled={ocupado || !novaNota.trim()} className="mt-2 inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-white hover:bg-primary-hover disabled:opacity-50">
             {ocupado ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Adicionar nota
@@ -315,9 +325,15 @@ export default function FichaEdital({ itemId, onRemovido }: { itemId: string; on
 
         {/* Checklist */}
         <div className="card bg-white dark:bg-slate-900 dark:border-slate-800 p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold text-slate-900 dark:text-white">Checklist de habilitação</h2>
-            <span className="text-xs text-slate-400">{checkFeitos}/{checklist.length}</span>
+          <div className="mb-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">Checklist de habilitação</h2>
+              <span className="text-xs text-slate-400">{checkFeitos}/{checklist.length}</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 mt-2 overflow-hidden">
+              <div className="h-full bg-success transition-all" style={{ width: `${checklist.length ? (checkFeitos / checklist.length) * 100 : 0}%` }} />
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1">Marque o que já está pronto. Você pode adicionar ou remover itens.</p>
           </div>
           <div className="flex gap-2">
             <input value={novoCheck} onChange={(e) => setNovoCheck(e.target.value)} placeholder="Novo item..." className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm" onKeyDown={(e) => e.key === 'Enter' && addCheck()} />
@@ -342,7 +358,8 @@ export default function FichaEdital({ itemId, onRemovido }: { itemId: string; on
 
         {/* Prazos */}
         <div className="card bg-white dark:bg-slate-900 dark:border-slate-800 p-5 lg:col-span-2">
-          <h2 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Prazos</h2>
+          <h2 className="text-sm font-bold text-slate-900 dark:text-white mb-1">Prazos</h2>
+          <p className="text-[11px] text-slate-400 mb-3">Você recebe um e-mail 24h antes de cada prazo. Cadastre esclarecimentos, impugnação, envio da proposta, etc.</p>
           <div className="flex flex-wrap gap-2 items-end">
             <select value={novoTipo} onChange={(e) => setNovoTipo(e.target.value as PrazoTipo)} className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm">
               {TIPOS_PRAZO.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}

@@ -7,6 +7,7 @@ import { TrendingUp, FileText, Clock, AlertTriangle, Heart, DollarSign, Search, 
 import OpportunityCard from '@/components/opportunities/opportunity-card';
 import StatCard from '@/components/ui/stat-card';
 import PageHeader from '@/components/ui/page-header';
+import ResumoEstacao from '@/components/estacao/resumo-dashboard';
 import DataSourceNotice, { type DataSource } from '@/components/ui/data-source-notice';
 import { Badge } from '@/components/ui/badge';
 import { CardSkeleton, StatsSkeleton } from '@/components/ui/skeleton';
@@ -288,6 +289,8 @@ export default function DashboardPage() {
             : 'Indicadores indisponíveis no momento (fonte PNCP não respondeu)'
         }
       />
+
+      <ResumoEstacao />
 
       <form
         onSubmit={(e) => {

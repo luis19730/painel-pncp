@@ -8,12 +8,12 @@
 export const LIMITE_GRATIS = 10
 
 export const ETAPAS = [
-  { id: 'em_analise', label: 'Em análise', cor: 'slate' },
-  { id: 'preparando_proposta', label: 'Preparando proposta', cor: 'blue' },
-  { id: 'proposta_enviada', label: 'Proposta enviada', cor: 'violet' },
-  { id: 'aguardando_resultado', label: 'Aguardando resultado', cor: 'amber' },
-  { id: 'ganha', label: 'Ganha', cor: 'emerald' },
-  { id: 'perdida', label: 'Perdida', cor: 'rose' },
+  { id: 'em_analise', label: 'Em análise', cor: 'slate', desc: 'Estudando se vale participar' },
+  { id: 'preparando_proposta', label: 'Preparando proposta', cor: 'blue', desc: 'Montando documentos e preço' },
+  { id: 'proposta_enviada', label: 'Proposta enviada', cor: 'violet', desc: 'Proposta entregue ao órgão' },
+  { id: 'aguardando_resultado', label: 'Aguardando resultado', cor: 'amber', desc: 'Esperando o julgamento' },
+  { id: 'ganha', label: 'Ganha', cor: 'emerald', desc: 'Você venceu esta licitação' },
+  { id: 'perdida', label: 'Perdida', cor: 'rose', desc: 'Não foi dessa vez' },
 ] as const
 
 /** Etapa "arquivada" (não aparece no kanban; acessível por filtro). */

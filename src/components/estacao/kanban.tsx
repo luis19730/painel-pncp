@@ -47,11 +47,14 @@ export default function Kanban({
                 : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40'
             )}
           >
-            <div className="flex items-center justify-between mb-3 px-1">
-              <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">{col.label}</h3>
-              <span className="text-xs font-semibold text-slate-400 bg-white dark:bg-slate-800 rounded-full px-2 py-0.5">
-                {cards.length}
-              </span>
+            <div className="mb-3 px-1">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">{col.label}</h3>
+                <span className="text-xs font-semibold text-slate-400 bg-white dark:bg-slate-800 rounded-full px-2 py-0.5">
+                  {cards.length}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">{col.desc}</p>
             </div>
             <div className="space-y-3 min-h-[60px]">
               {cards.map((i) => (
