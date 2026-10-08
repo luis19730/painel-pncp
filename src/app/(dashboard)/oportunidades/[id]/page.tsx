@@ -8,7 +8,7 @@ import FavoriteButton from '@/components/opportunities/favorite-button';
 import BotaoEstacao from '@/components/estacao/botao-estacao';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency, formatDate, getStatusColor } from '@/lib/utils';
-import { getOpportunityById, mapItem, isPncpeditalLink, buildPncpEditalUrl } from '@/lib/pncp';
+import { getOpportunityById, mapItem, isPncpeditalLink, buildPncpEditalUrl, decodePncpParam } from '@/lib/pncp';
 import { calculateScore } from '@/lib/scoring';
 import { ITEMS } from '@/lib/market-data';
 import { track } from '@/lib/analytics';
@@ -52,7 +52,9 @@ const MAXES: Record<string, number> = { keyword: 30, location: 20, value: 20, de
 export default function OportunidadeDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const id = params.id as string;
+  // O número de controle do PNCP contém "/", que não pode ser um segmento de
+  // rota — o link usa "~". Aqui decodificamos de volta para o id real.
+  const id = decodePncpParam(params.id as string);
   const [item, setItem] = useState<any>(null);
   const [score, setScore] = useState<ReturnType<typeof calculateScore> | null>(null);
   const [loading, setLoading] = useState(true);

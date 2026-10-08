@@ -13,7 +13,7 @@ import { formatCurrency, formatDate, cn } from '@/lib/utils';
 import { searchItems } from '@/lib/market-data';
 import type { ItemRecord } from '@/lib/market-data';
 import { searchLiveOpportunities } from '@/lib/pncp-data';
-import { buildPncpEditalUrl } from '@/lib/pncp';
+import { buildPncpEditalUrl, encodePncpParam } from '@/lib/pncp';
 import { getOpportunityStatus } from '@/lib/utils';
 import { track } from '@/lib/analytics';
 import type { Opportunity } from '@/types';
@@ -389,7 +389,7 @@ function ResultList({ items }: { items: ItemRecord[] }) {
       {items.map((item) => (
         <Link
           key={item.id}
-          href={`/oportunidades/${item.id}`}
+          href={`/oportunidades/${encodePncpParam(item.id)}`}
           className="card card-hover bg-white dark:bg-slate-900 dark:border-slate-800 p-4 flex flex-col"
         >
           <div className="flex items-center justify-between mb-2">
@@ -453,7 +453,7 @@ function LiveResultList({ items }: { items: Opportunity[] }) {
               <span className="text-xs font-semibold text-primary">{formatCurrency(item.valor)}</span>
             ) : null}
           </div>
-          <Link href={`/oportunidades/${item.id}`} className="group">
+          <Link href={`/oportunidades/${encodePncpParam(item.id)}`} className="group">
             <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-1 line-clamp-2 group-hover:text-primary transition-colors">{item.objeto}</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 line-clamp-1">{item.numero}</p>
           </Link>

@@ -13,6 +13,7 @@ import { CardSkeleton, StatsSkeleton } from '@/components/ui/skeleton';
 import { formatCurrency, normalizar, formatDate, getDaysUntil, getDeadlineColor, cn } from '@/lib/utils';
 import { calculateScore } from '@/lib/scoring';
 import { searchLiveContratacoes } from '@/lib/pncp-data';
+import { encodePncpParam } from '@/lib/pncp';
 import { computeOpportunityMetrics, filterQuery } from '@/lib/opportunity';
 import { createClient } from '@/lib/supabase/client';
 import { alertKey as alertStorageKey, favoriteKey as favoriteStorageKey } from '@/lib/storage-keys';
@@ -385,7 +386,7 @@ export default function DashboardPage() {
                   const dias = getDaysUntil(o.dataEncerramento)
                   return (
                     <li key={o.id}>
-                      <Link href={`/oportunidades/${o.id}`} className="block group">
+                      <Link href={`/oportunidades/${encodePncpParam(o.id)}`} className="block group">
                         <p className="text-sm font-medium text-slate-800 dark:text-slate-100 line-clamp-1 group-hover:text-primary transition-colors">{o.objeto}</p>
                         <div className="flex items-center gap-2 mt-1 text-xs">
                           <span className={`inline-flex items-center gap-1 font-semibold ${getDeadlineColor(dias)}`}>

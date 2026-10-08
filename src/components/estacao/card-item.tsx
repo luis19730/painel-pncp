@@ -1,9 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { Building2, MapPin, Calendar, Clock, Coins } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Building2, MapPin, Calendar, Clock, Coins, ExternalLink } from 'lucide-react'
 import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import { encodePncpId } from '@/lib/estacao/encode'
+import { buildPncpEditalUrl } from '@/lib/pncp'
 import { ETAPAS, labelEtapa } from '@/lib/estacao/config'
 
 interface PrazoMini {
@@ -69,6 +71,11 @@ export default function CardItem({
 }) {
   const prazo = proximoPrazo(item.workspace_prazos)
   const cd = prazo ? countdown(prazo.data_hora) : null
+  const router = useRouter()
+  const fichaHref = `/estacao/${encodePncpId(item.numero_controle_pncp)}`
+  const pncpUrl = buildPncpEditalUrl({ id: item.numero_controle_pncp })
+
+  const abrir = () => router.push(fichaHref)
 
   return (
     <div
@@ -78,9 +85,16 @@ export default function CardItem({
         onDragStart(item.id)
       }}
       onDragEnd={onDragEnd}
-      className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing"
+      onClick={abrir}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') abrir()
+      }}
+      title="Abrir a ficha desta licitação"
+      className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm hover:shadow-md hover:border-primary/50 transition-all cursor-pointer active:cursor-grabbing"
     >
-      <Link href={`/estacao/${encodePncpId(item.numero_controle_pncp)}`} className="block group">
+      <Link href={fichaHref} onClick={(e) => e.stopPropagation()} className="block group">
         <p className="text-sm font-semibold text-slate-900 dark:text-white leading-snug line-clamp-2 group-hover:text-primary transition-colors">
           {item.objeto || item.numero_controle_pncp}
         </p>
@@ -135,6 +149,7 @@ export default function CardItem({
         <select
           value={item.etapa}
           onChange={(e) => onMover(item.id, e.target.value)}
+          onClick={(e) => e.stopPropagation()}
           className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5 text-xs"
           aria-label="Mover para etapa"
         >
@@ -143,6 +158,29 @@ export default function CardItem({
           ))}
           <option value="descartada">{labelEtapa('descartada')}</option>
         </select>
+      </div>
+
+      <div className="mt-3 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            abrir()
+          }}
+          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+        >
+          Abrir ficha
+        </button>
+        <a
+          href={pncpUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 text-[11px] font-semibold text-primary hover:bg-slate-50 dark:hover:bg-slate-800"
+          title="Abrir o edital no PNCP"
+        >
+          PNCP <ExternalLink className="w-3 h-3" />
+        </a>
       </div>
     </div>
   )

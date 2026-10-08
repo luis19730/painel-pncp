@@ -143,6 +143,20 @@ export function buildPncpEditalUrl(o: { link?: string | null; id?: string }): st
   return PNCP_EDITAIS_URL
 }
 
+/**
+ * Slug seguro para usar o número de controle PNCP (`...-1-000045/2026`) como
+ * SEGMENTO de rota — ele contém `/`, que quebraria a URL. Trocamos por `~`.
+ * Usado nos links internos (`/oportunidades/<slug>`, `/estacao/<slug>`).
+ */
+export function encodePncpParam(id: string): string {
+  return String(id || '').trim().replace(/\//g, '~')
+}
+
+/** Inverso de `encodePncpParam`. */
+export function decodePncpParam(slug: string): string {
+  return decodeURIComponent(String(slug || '')).replace(/~/g, '/')
+}
+
 export function mapItem(item: PNCPItem): Opportunity {
   const cnpj = item.orgao_cnpj || ''
   const controle = item.numero_controle_pncp || ''

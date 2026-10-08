@@ -8,7 +8,7 @@ import FavoriteButton from '@/components/opportunities/favorite-button'
 import BotaoEstacao from '@/components/estacao/botao-estacao'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatDate, getDaysUntil, getDeadlineColor, getStatusColor } from '@/lib/utils'
-import { buildPncpEditalUrl } from '@/lib/pncp'
+import { buildPncpEditalUrl, encodePncpParam } from '@/lib/pncp'
 import { track } from '@/lib/analytics'
 
 export default function OpportunityCard({ item }: { item: any }) {
@@ -41,7 +41,7 @@ export default function OpportunityCard({ item }: { item: any }) {
       </div>
 
       <Link
-        href={`/oportunidades/${item.id}`}
+        href={`/oportunidades/${encodePncpParam(item.id)}`}
         onClick={handleView}
         className="group inline-flex items-start gap-1.5"
         title="Abrir detalhes da oportunidade no painel"
