@@ -20,7 +20,7 @@ export default function Kanban({
   const [over, setOver] = useState<string | null>(null)
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 snap-x">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 items-start">
       {ETAPAS.map((col) => {
         const cards = itens
           .filter((i) => i.etapa === col.id)
@@ -41,7 +41,7 @@ export default function Kanban({
               setDragging(null)
             }}
             className={cn(
-              'flex-1 min-w-[270px] max-w-[320px] rounded-2xl border p-3 snap-start transition-colors',
+              'min-w-0 rounded-2xl border p-3 transition-colors',
               over === col.id
                 ? 'border-primary bg-primary/5'
                 : 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40'

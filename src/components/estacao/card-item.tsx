@@ -95,7 +95,7 @@ export default function CardItem({
       className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm hover:shadow-md hover:border-primary/50 transition-all cursor-pointer active:cursor-grabbing"
     >
       <Link href={fichaHref} onClick={(e) => e.stopPropagation()} className="block group">
-        <p className="text-sm font-semibold text-slate-900 dark:text-white leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+        <p className="text-sm font-semibold text-slate-900 dark:text-white leading-snug line-clamp-2 break-words group-hover:text-primary transition-colors">
           {item.objeto || item.numero_controle_pncp}
         </p>
       </Link>
