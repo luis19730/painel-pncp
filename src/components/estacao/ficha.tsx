@@ -11,13 +11,7 @@ import { formatCurrency, formatDate, cn } from '@/lib/utils'
 import { buildPncpEditalUrl } from '@/lib/pncp'
 import { ETAPAS, TIPOS_PRAZO, labelEtapa, type PrazoTipo } from '@/lib/estacao/config'
 import type { WorkspaceItem, WorkspaceNota, WorkspacePrazo, WorkspaceChecklistItem } from '@/lib/estacao/types'
-
-async function api(url: string, init?: RequestInit) {
-  const r = await fetch(url, { cache: 'no-store', ...init })
-  const j = await r.json().catch(() => null)
-  if (!r.ok || !j?.ok) throw new Error(j?.erro || 'Falha na operação.')
-  return j
-}
+import { apiEstacao as api } from '@/lib/estacao/client'
 
 function fmtDataHora(iso: string): string {
   try {

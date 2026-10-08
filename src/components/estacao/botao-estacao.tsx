@@ -87,6 +87,11 @@ export default function BotaoEstacao({
         body: JSON.stringify(item),
       })
       const j = await r.json().catch(() => null)
+      if (r.status === 401) {
+        const vol = typeof window !== 'undefined' ? window.location.pathname + window.location.search : pathname
+        router.push(`/login?redirect=${encodeURIComponent(vol)}`)
+        return
+      }
       if (r.status === 402 && j?.limite) {
         setMsg(j.erro || 'Limite do plano gratuito atingido.')
         return

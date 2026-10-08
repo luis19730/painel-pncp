@@ -8,6 +8,7 @@ import EmptyState from '@/components/ui/empty-state'
 import { Badge } from '@/components/ui/badge'
 import Kanban from '@/components/estacao/kanban'
 import { type BoardItem } from '@/components/estacao/card-item'
+import { apiEstacao } from '@/lib/estacao/client'
 import { UFS_BRASIL } from '@/data/municipios'
 
 interface ItemRow extends BoardItem {
@@ -28,9 +29,7 @@ export default function EstacaoPage() {
     setCarregando(true)
     setErro('')
     try {
-      const r = await fetch('/api/estacao/itens?arquivados=1', { cache: 'no-store' })
-      const j = await r.json().catch(() => null)
-      if (!r.ok || !j?.ok) throw new Error(j?.erro || 'Falha ao carregar.')
+      const j = await apiEstacao<{ itens: ItemRow[] }>('/api/estacao/itens?arquivados=1')
       setItens(j.itens || [])
     } catch (e) {
       setErro((e as Error).message)
@@ -46,7 +45,7 @@ export default function EstacaoPage() {
   const mover = useCallback(async (itemId: string, etapa: string) => {
     setItens((prev) => prev.map((i) => (i.id === itemId ? { ...i, etapa } : i)))
     try {
-      await fetch(`/api/estacao/itens/${itemId}`, {
+      await apiEstacao(`/api/estacao/itens/${itemId}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ etapa }),

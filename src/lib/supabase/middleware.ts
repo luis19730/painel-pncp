@@ -7,6 +7,20 @@ import { isAdminEmail } from '@/lib/auth/admin-emails'
 import { isEmailBloqueado } from '@/lib/auth/email-validation'
 
 export async function updateSession(request: NextRequest) {
+  // HOST CANÔNICO: a sessão do Supabase é um cookie "host-only", então apex,
+  // www e o subdomínio *.workers.dev seriam sessões DIFERENTES (quem loga em um
+  // cai no /login ao abrir outro). Redirecionamos tudo para um único host para
+  // que a Estação (e todo o painel) funcione de forma consistente.
+  const host = (request.headers.get('host') || '').toLowerCase()
+  const CANONICAL_HOST = process.env.NEXT_PUBLIC_CANONICAL_HOST || 'www.painelpncp.com.br'
+  const hostsParaCanonicalizar = ['painelpncp.com.br', 'painel-pncp.luis19730.workers.dev']
+  if (hostsParaCanonicalizar.includes(host) && !request.nextUrl.pathname.startsWith('/api/')) {
+    const url = request.nextUrl.clone()
+    url.host = CANONICAL_HOST
+    url.protocol = 'https'
+    return NextResponse.redirect(url, 308)
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(

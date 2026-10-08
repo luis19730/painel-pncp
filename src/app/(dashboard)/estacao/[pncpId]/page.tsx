@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Loader2 } from 'lucide-react'
 import FichaEdital from '@/components/estacao/ficha'
 import { decodePncpId } from '@/lib/estacao/encode'
+import { apiEstacao } from '@/lib/estacao/client'
 
 export default function EstacaoFichaPage() {
   const params = useParams()
@@ -21,8 +22,9 @@ export default function EstacaoFichaPage() {
     let ativo = true
     ;(async () => {
       try {
-        const r = await fetch(`/api/estacao/itens?pncp=${encodeURIComponent(numero)}`, { cache: 'no-store' })
-        const j = await r.json().catch(() => null)
+        const j = await apiEstacao<{ existente: { id: string } | null }>(
+          `/api/estacao/itens?pncp=${encodeURIComponent(numero)}`
+        )
         if (!ativo) return
         if (j?.existente?.id) setItemId(j.existente.id)
         else setNaoEncontrado(true)

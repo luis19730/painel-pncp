@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Calendar } from 'lucide-react'
 import PageHeader from '@/components/ui/page-header'
 import PrazosLista, { type PrazoComItem } from '@/components/estacao/prazos-lista'
+import { apiEstacao } from '@/lib/estacao/client'
 
 export default function EstacaoPrazosPage() {
   const [prazos, setPrazos] = useState<PrazoComItem[]>([])
@@ -13,9 +14,7 @@ export default function EstacaoPrazosPage() {
   useEffect(() => {
     ;(async () => {
       try {
-        const r = await fetch('/api/estacao/prazos', { cache: 'no-store' })
-        const j = await r.json().catch(() => null)
-        if (!r.ok || !j?.ok) throw new Error(j?.erro || 'Falha ao carregar.')
+        const j = await apiEstacao<{ prazos: PrazoComItem[] }>('/api/estacao/prazos')
         setPrazos(j.prazos || [])
       } catch (e) {
         setErro((e as Error).message)
