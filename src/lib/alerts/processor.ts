@@ -27,6 +27,7 @@ import { buildEmailHtml, buildEmailText, buildTelegramText } from './notificatio
 import type { AlertOpportunity } from './notifications/content'
 import type { AlertRecord, Canal, ChannelRecord, ScheduleRecord } from './types'
 import { isDueNow } from './scheduling'
+import { alertasAtivos } from './ativo'
 
 export interface ProcessResult {
   alerta: string
@@ -87,6 +88,9 @@ export async function processAlert(
   alert: AlertRecord,
   immediateOverride?: boolean
 ): Promise<ProcessResult[]> {
+  // Envio de alertas desligado (ver lib/alerts/ativo.ts).
+  if (!alertasAtivos()) return []
+
   const c = await client()
   const channels = await activeChannels(alert.id)
   if (channels.length === 0) return []
@@ -207,6 +211,9 @@ export async function runImmediate(): Promise<RunReport> {
  * Envia o lote de entregas PROGRAMADAS que estiver no horário (Brasília).
  */
 export async function runScheduledBatch(): Promise<RunReport> {
+  // Envio de alertas desligado (ver lib/alerts/ativo.ts).
+  if (!alertasAtivos()) return { total: 0, executados: [] }
+
   const c = await client()
   const alerts = await allActiveAlerts()
   const executados: ProcessResult[] = []
@@ -290,6 +297,11 @@ export async function sendTest(input: {
   destino: string
   nomeAlerta: string
 }): Promise<{ ok: boolean; notConfigured: boolean; erro?: string }> {
+  // Envio de alertas desligado (ver lib/alerts/ativo.ts).
+  if (!alertasAtivos()) {
+    return { ok: false, notConfigured: false, erro: 'Alertas desativados. Nenhuma mensagem foi enviada.' }
+  }
+
   const opp: AlertOpportunity = {
     id: 'teste',
     objeto: 'Esta é uma mensagem de teste do Painel PNCP.',

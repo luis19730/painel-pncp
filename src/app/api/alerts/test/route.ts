@@ -4,6 +4,7 @@ import { requirePaidAccess } from '@/lib/auth/require-access'
 import { sendTest } from '@/lib/alerts/processor'
 import { normalizeTelegram, isValidEmail } from '@/lib/alerts/validation'
 import type { Canal } from '@/lib/alerts/types'
+import { alertasAtivos, ALERTAS_DESATIVADOS } from '@/lib/alerts/ativo'
 
 /**
  * POST /api/alerts/test
@@ -14,6 +15,10 @@ import type { Canal } from '@/lib/alerts/types'
 export async function POST(req: Request) {
   const guard = await requirePaidAccess()
   if (!guard.ok) return guard.response
+
+  // Alertas desligados: nao envia nem a mensagem de teste.
+  if (!alertasAtivos()) return NextResponse.json(ALERTAS_DESATIVADOS)
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {

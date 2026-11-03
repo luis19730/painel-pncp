@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { runImmediate, runScheduledBatch } from '@/lib/alerts/processor'
 import { isConfigured } from '@/lib/alerts/is-configured'
 import { autorizarCron } from '@/lib/cron/auth'
+import { alertasAtivos, ALERTAS_DESATIVADOS } from '@/lib/alerts/ativo'
 
 /**
  * GET /api/cron/alertas
@@ -21,6 +22,9 @@ import { autorizarCron } from '@/lib/cron/auth'
 export async function GET(req: Request) {
   const auth = autorizarCron(req)
   if (!auth.ok) return auth.response
+
+  // Alertas desligados: nao processa nem envia nada.
+  if (!alertasAtivos()) return NextResponse.json(ALERTAS_DESATIVADOS)
 
   if (!isConfigured()) {
     return NextResponse.json(

@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/alerts/db'
 import { autorizarCron } from '@/lib/cron/auth'
 import { siteBaseUrl } from '@/lib/auth/site-url'
 import { enviarEmailAlerta, type PrazoAlerta } from '@/lib/estacao/alerta-email'
+import { alertasAtivos, ALERTAS_DESATIVADOS } from '@/lib/alerts/ativo'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,6 +26,9 @@ interface PrazoRow {
 export async function GET(req: Request) {
   const auth = autorizarCron(req)
   if (!auth.ok) return auth.response
+
+  // Alertas desligados: nao envia e-mails de prazo (nada e marcado como enviado).
+  if (!alertasAtivos()) return NextResponse.json(ALERTAS_DESATIVADOS)
 
   let client
   try {

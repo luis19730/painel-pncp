@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requirePaidAccess } from '@/lib/auth/require-access'
 import { processUserImmediate } from '@/lib/alerts/processor'
+import { alertasAtivos, ALERTAS_DESATIVADOS } from '@/lib/alerts/ativo'
 
 /**
  * POST /api/alerts/process
@@ -12,6 +13,10 @@ import { processUserImmediate } from '@/lib/alerts/processor'
 export async function POST(req: Request) {
   const guard = await requirePaidAccess()
   if (!guard.ok) return guard.response
+
+  // Alertas desligados: nao processa nem envia nada.
+  if (!alertasAtivos()) return NextResponse.json(ALERTAS_DESATIVADOS)
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {

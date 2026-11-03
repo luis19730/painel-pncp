@@ -11,8 +11,12 @@ name: Alertas — processamento (5 min)
 #   - CRON_SECRET   : mesmo valor do secret CRON_SECRET configurado no worker
 
 on:
-  schedule:
-    - cron: '*/5 * * * *'
+  # ALERTAS DESATIVADOS em 03/11/2026 (ver src/lib/alerts/ativo.ts).
+  # Agendamento removido de proposito. Para voltar a enviar:
+  #   1) defina ALERTAS_ATIVOS=1 no Worker;
+  #   2) descomente o schedule abaixo.
+  # schedule:
+  #   - cron: '*/5 * * * *'
   workflow_dispatch: {}
 
 # Evita execuções sobrepostas do mesmo job.
