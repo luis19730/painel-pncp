@@ -8,6 +8,7 @@ import { sendEmail } from '@/lib/alerts/notifications/email'
 import { siteBaseUrl } from '@/lib/auth/site-url'
 import { trialExpiradoEmailHtml, trialExpiradoEmailText } from '@/lib/planos/trial-email'
 import { registrarEvento } from '@/lib/analytics-server'
+import { campanhasEmailAtivas, CAMPANHAS_DESATIVADAS } from '@/lib/emails/campanhas'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,6 +31,9 @@ export const dynamic = 'force-dynamic'
 export async function GET(req: Request) {
   const auth = autorizarCron(req)
   if (!auth.ok) return auth.response
+
+  // Campanhas desligadas: nao envia nada, mesmo com chamada manual/agendada.
+  if (!campanhasEmailAtivas()) return NextResponse.json(CAMPANHAS_DESATIVADAS)
 
   let client
   try {

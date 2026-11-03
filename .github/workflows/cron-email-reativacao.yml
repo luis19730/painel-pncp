@@ -14,9 +14,13 @@ name: Trial - campanha de reativacao diaria
 # candidatos sem enviar nada.
 
 on:
-  schedule:
-    # 10:00 BRT (America/Sao_Paulo, UTC-3) = 13:00 UTC
-    - cron: '0 13 * * *'
+  # CAMPANHAS DESATIVADAS em 03/11/2026 (ver src/lib/emails/campanhas.ts).
+  # Agendamento removido de proposito. Para voltar a enviar:
+  #   1) defina EMAIL_CAMPANHAS_ATIVAS=1 no Worker;
+  #   2) descomente o schedule abaixo.
+  # schedule:
+  #   # 10:00 BRT (America/Sao_Paulo, UTC-3) = 13:00 UTC
+  #   - cron: '0 13 * * *'
   workflow_dispatch: {}
 
 jobs:

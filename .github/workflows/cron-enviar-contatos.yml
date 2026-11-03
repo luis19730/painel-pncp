@@ -10,9 +10,13 @@
 #   - CRON_SECRET   : mesmo valor do secret CRON_SECRET configurado no worker
 
 on:
-  schedule:
-    # 09:30 BRT (America/Sao_Paulo, UTC-3) = 12:30 UTC
-    - cron: '30 12 * * *'
+  # CAMPANHAS DESATIVADAS em 03/11/2026 (ver src/lib/emails/campanhas.ts).
+  # Agendamento removido de proposito. Para voltar a enviar:
+  #   1) defina EMAIL_CAMPANHAS_ATIVAS=1 no Worker;
+  #   2) descomente o schedule abaixo.
+  # schedule:
+  #   # 09:30 BRT (America/Sao_Paulo, UTC-3) = 12:30 UTC
+  #   - cron: '30 12 * * *'
   workflow_dispatch:
     inputs:
       limite:

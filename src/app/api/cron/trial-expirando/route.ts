@@ -9,6 +9,7 @@ import { siteBaseUrl } from '@/lib/auth/site-url'
 import { trialLembreteAssunto, trialLembreteEmailHtml, trialLembreteEmailText } from '@/lib/planos/trial-email'
 import { registrarEvento } from '@/lib/analytics-server'
 import { resolverIgnorados } from '@/lib/admin/publico'
+import { campanhasEmailAtivas, CAMPANHAS_DESATIVADAS } from '@/lib/emails/campanhas'
 
 export const dynamic = 'force-dynamic'
 
@@ -46,6 +47,9 @@ function diasAte(fimIso: string, agora: Date): number {
 export async function GET(req: Request) {
   const auth = autorizarCron(req)
   if (!auth.ok) return auth.response
+
+  // Campanhas desligadas: nao envia nada, mesmo com chamada manual/agendada.
+  if (!campanhasEmailAtivas()) return NextResponse.json(CAMPANHAS_DESATIVADAS)
 
   let client
   try {

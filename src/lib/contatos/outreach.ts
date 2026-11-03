@@ -14,6 +14,7 @@ import { sendEmail } from '@/lib/alerts/notifications/email'
 import { emailsIgnorados } from '@/lib/admin/publico'
 import { outreachAssunto, outreachEmailHtml, outreachEmailText } from '@/lib/contatos/outreach-email'
 import { emailEhValido } from '@/lib/contatos/extracao'
+import { campanhasEmailAtivas } from '@/lib/emails/campanhas'
 
 type AnyClient = SupabaseClient<any, 'public', any>
 
@@ -27,6 +28,7 @@ export interface ResumoEnvio {
   enviados: number
   pulados: number
   falhas: number
+  desativado?: boolean
   resultados: Array<{ email: string; orgao: string | null; status: string; motivo?: string | null }>
 }
 
@@ -40,6 +42,21 @@ export async function enviarLoteContatos(
   limite: number,
   opts: { siteUrl: string; dryRun?: boolean; paraEmail?: string; ids?: number[] }
 ): Promise<ResumoEnvio> {
+  // Interruptor geral: campanhas desligadas por padrao (ver lib/emails/campanhas).
+  // Bloqueia tambem o modo de teste, para nao sair nenhum e-mail de campanha.
+  if (!campanhasEmailAtivas()) {
+    return {
+      dryRun: !!opts.dryRun,
+      limite: 0,
+      selecionados: 0,
+      enviados: 0,
+      pulados: 0,
+      falhas: 0,
+      desativado: true,
+      resultados: [],
+    }
+  }
+
   const base = String(opts.siteUrl || 'https://www.painelpncp.com.br').replace(/\/$/, '')
   const cadastroLink = `${base}/cadastro`
   const dryRun = !!opts.dryRun

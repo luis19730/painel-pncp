@@ -8,6 +8,7 @@ import { computePlanoInfo, type PlanoNome } from '@/lib/planos/plano'
 import { emailValido } from '@/lib/planos/reativacao'
 import { EMAIL_REATIVACAO_ASSUNTO, emailReativacaoEmailHtml, emailReativacaoEmailText } from '@/lib/planos/trial-email'
 import { sendEmail } from '@/lib/alerts/notifications/email'
+import { campanhasEmailAtivas, CAMPANHAS_DESATIVADAS } from '@/lib/emails/campanhas'
 import { siteBaseUrl } from '@/lib/auth/site-url'
 
 export const dynamic = 'force-dynamic'
@@ -152,6 +153,8 @@ export async function POST(req: Request) {
 
   // Envio manual do e-mail de recuperação (campanha de reativação)
   if (body.acao === 'enviar_reativacao') {
+    // Campanhas desligadas: bloqueia também o envio manual de reativação.
+    if (!campanhasEmailAtivas()) return NextResponse.json(CAMPANHAS_DESATIVADAS)
     try {
       const { users, error: usersErr } = await listAllUsers(client)
       if (usersErr) throw usersErr

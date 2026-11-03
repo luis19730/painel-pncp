@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/alerts/db'
 import { authorizeAdmin } from '@/lib/admin/auth'
 import { siteBaseUrl } from '@/lib/auth/site-url'
 import { enviarLoteContatos } from '@/lib/contatos/outreach'
+import { campanhasEmailAtivas, CAMPANHAS_DESATIVADAS } from '@/lib/emails/campanhas'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,6 +18,9 @@ export const dynamic = 'force-dynamic'
 export async function POST(req: Request) {
   const auth = await authorizeAdmin(req)
   if (!auth.ok) return auth.response
+
+  // Campanhas desligadas: bloqueia tambem o disparo manual de outreach.
+  if (!campanhasEmailAtivas()) return NextResponse.json(CAMPANHAS_DESATIVADAS)
 
   let client
   try {
