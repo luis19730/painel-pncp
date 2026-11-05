@@ -24,64 +24,18 @@ import {
 import { dataBR } from '@/lib/sicx/calc'
 import { cn } from '@/lib/utils'
 
-const URL_PAGINA = 'https://www.painelpncp.com.br/credenciamento-sicx'
-
-const DESCRICAO =
-  'SICX (Lei 15.266/2025): guia do fornecedor, diretório de almoxarifados virtuais, checklist e ferramentas de apoio. Conteúdo informativo.'
-
 export const metadata: Metadata = {
   title: 'SICX: guia do fornecedor, almoxarifados e ferramentas',
-  description: DESCRICAO,
-  alternates: { canonical: '/credenciamento-sicx' },
-  openGraph: {
-    title: 'SICX: guia do fornecedor, almoxarifados e ferramentas',
-    description: DESCRICAO,
-    url: URL_PAGINA,
-    siteName: 'Painel PNCP',
-    locale: 'pt_BR',
-    type: 'article',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'SICX: guia do fornecedor, almoxarifados e ferramentas',
-    description: DESCRICAO,
-  },
+  robots: { index: false, follow: false },
 }
 
-export const revalidate = 3600
+// Página interna (exige login): renderiza a cada acesso, sem cache estático.
+export const dynamic = 'force-dynamic'
 
 const CSS_FLOW = `
 .sicx-flow{display:flex;flex-direction:column;gap:0}
 .sicx-flow > section{scroll-margin-top:9.5rem}
 `
-
-function jsonLd(conteudo: Awaited<ReturnType<typeof carregarConteudoSicx>>, atualizadoEm: string) {
-  const artigo = {
-    '@type': 'Article',
-    headline: 'SICX: guia do fornecedor, almoxarifados e ferramentas',
-    description: DESCRICAO,
-    datePublished: '2026-11-05',
-    dateModified: atualizadoEm,
-    inLanguage: 'pt-BR',
-    mainEntityOfPage: { '@type': 'WebPage', '@id': URL_PAGINA },
-    author: { '@type': 'Organization', name: 'Painel PNCP' },
-    publisher: { '@type': 'Organization', name: 'Painel PNCP', url: 'https://www.painelpncp.com.br' },
-    about: [
-      { '@type': 'Thing', name: 'Sistema de Compras Expressas (SICX)' },
-      { '@type': 'Legislation', name: 'Lei nº 15.266/2025' },
-      { '@type': 'Legislation', name: 'Decreto nº 13.106/2026' },
-    ],
-  }
-  const faq = {
-    '@type': 'FAQPage',
-    mainEntity: FAQ.map((f) => ({
-      '@type': 'Question',
-      name: f.pergunta,
-      acceptedAnswer: { '@type': 'Answer', text: f.resposta },
-    })),
-  }
-  return { '@context': 'https://schema.org', '@graph': [artigo, faq], source: conteudo.fonte }
-}
 
 export default async function CredenciamentoSicxPage() {
   const conteudo = await carregarConteudoSicx()
@@ -91,12 +45,10 @@ export default async function CredenciamentoSicxPage() {
     fonte_url: STATUS_PADRAO.fonte_url,
   }
   const atualizadoEm = ultimaAtualizacao(conteudo)
-  const dadosEstruturados = JSON.stringify(jsonLd(conteudo, atualizadoEm)).replace(/</g, '\\u003c')
 
   return (
-    <div className="bg-white dark:bg-[#0b1120]">
+    <div>
       <style dangerouslySetInnerHTML={{ __html: `${cssOrdemSecoes()}${CSS_FLOW}` }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: dadosEstruturados }} />
 
       {/* HERO + QUADRO DE STATUS */}
       <section className="relative overflow-hidden border-b border-slate-200 dark:border-slate-800 bg-gradient-to-br from-primary-soft/70 via-white to-secondary-soft/50 dark:from-primary/10 dark:via-[#0b1120] dark:to-secondary/10">

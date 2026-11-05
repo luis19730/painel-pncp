@@ -77,6 +77,10 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith('/admin') ||
     pathname.startsWith('/estacao') ||
     pathname.startsWith('/analista') ||
+    // A página do SICX é protegida (somente logado). O link de descadastro
+    // (/credenciamento-sicx/descadastro) continua público para o e-mail.
+    pathname === '/credenciamento-sicx' ||
+    pathname === '/credenciamento-sicx/' ||
     pathname.startsWith('/checkout') ||
     pathname.startsWith('/minha-assinatura')
 

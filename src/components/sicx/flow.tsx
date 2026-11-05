@@ -47,7 +47,7 @@ export default function SicxFlow({ children }: { children: React.ReactNode }) {
 
   return (
     <div>
-      <div className="sticky top-16 z-30 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-[#0b1120]/95 backdrop-blur-md">
+      <div className="sticky top-0 z-30 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-[#0b1120]/95 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 py-3 space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 mr-1">Eu sou:</span>

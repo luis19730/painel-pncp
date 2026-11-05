@@ -12,7 +12,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date()
 
   const estaticas = [
-    '/', '/planos', '/sobre', '/sicx', '/credenciamento-sicx', '/termos', '/privacidade',
+    '/', '/planos', '/sobre', '/sicx', '/termos', '/privacidade',
     '/licitacoes', '/categorias', '/ajuda',
   ]
 
