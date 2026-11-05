@@ -21,6 +21,11 @@ function pct(v: number | null | undefined): string {
   return `${Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`
 }
 
+/** Valor do cartão: usa o ofertado; se vazio, o de referência. */
+function valorDoCartao(c: CartaoKanban): number {
+  return Number(c.valor_ofertado) || Number(c.valor_referencia) || 0
+}
+
 function corMargem(v: number | null | undefined): string {
   const n = Number(v || 0)
   if (n < 0) return 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300'
@@ -109,12 +114,33 @@ export default function KanbanAnalista({
   const [montadoEm] = useState(() => Date.now())
 
   const metricas = useMemo(() => {
-    const total = lista.length
-    const valor = lista.reduce((s, c) => s + (Number(c.valor_ofertado) || Number(c.valor_referencia) || 0), 0)
-    const comMargem = lista.filter((c) => c.margem != null)
-    const margemMedia = comMargem.length ? comMargem.reduce((s, c) => s + Number(c.margem || 0), 0) / comMargem.length : 0
     const agora = montadoEm
+    const ref = new Date(agora)
     const limite = agora + 7 * 86400000
+    const nomeCol = (id: string) => nomeDaColuna(cols, id)
+    const ehGanha = (c: CartaoKanban) => /ganha|homologad|contrato|pagamento/i.test(nomeCol(c.coluna_id))
+    const ehPerdida = (c: CartaoKanban) => /perdid|desist/i.test(nomeCol(c.coluna_id))
+
+    const total = lista.length
+    const emAndamentoArr = lista.filter((c) => !ehGanha(c) && !ehPerdida(c))
+    const valorEmDisputa = emAndamentoArr.reduce((s, c) => s + valorDoCartao(c), 0)
+
+    const ganhas = lista.filter(ehGanha)
+    const perdidas = lista.filter(ehPerdida)
+    const ganhoNoMes = ganhas
+      .filter((c) => {
+        const d = new Date(c.atualizado_em)
+        return d.getFullYear() === ref.getFullYear() && d.getMonth() === ref.getMonth()
+      })
+      .reduce((s, c) => s + valorDoCartao(c), 0)
+
+    const decididas = ganhas.length + perdidas.length
+    const conversao = decididas ? (ganhas.length / decididas) * 100 : 0
+    const comMargem = ganhas.filter((c) => c.margem != null)
+    const margemGanhas = comMargem.length
+      ? comMargem.reduce((s, c) => s + Number(c.margem || 0), 0) / comMargem.length
+      : 0
+
     const proximos = lista.filter((c) => {
       const alvo = c.prazo_proposta || c.data_sessao
       if (!alvo) return false
@@ -125,8 +151,18 @@ export default function KanbanAnalista({
       const p = prazoInfo(c.prazo_proposta) || prazoInfo(c.data_sessao)
       return !!p?.vencido
     }).length
-    const ganhos = lista.filter((c) => /ganha|homologad|contrato/i.test(nomeDaColuna(cols, c.coluna_id))).length
-    return { total, valor, margemMedia, proximos, vencidos, ganhos }
+
+    return {
+      total,
+      emAndamento: emAndamentoArr.length,
+      valorEmDisputa,
+      ganhoNoMes,
+      conversao,
+      margemGanhas,
+      proximos,
+      vencidos,
+      ganhos: ganhas.length,
+    }
   }, [lista, cols, montadoEm])
 
   // -------------------------------------------------------------------------
@@ -237,13 +273,15 @@ export default function KanbanAnalista({
   return (
     <div className="space-y-4">
       {/* MÉTRICAS --------------------------------------------------------- */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-        <Metrica rotulo="Cartões" valor={String(metricas.total)} icone={<Kanban className="h-4 w-4" />} />
-        <Metrica rotulo="Valor no funil" valor={formatCurrency(metricas.valor)} icone={<TrendingUp className="h-4 w-4" />} />
-        <Metrica rotulo="Margem média" valor={pct(metricas.margemMedia)} icone={<Target className="h-4 w-4" />} />
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+        <Metrica rotulo="Em andamento" valor={String(metricas.emAndamento)} icone={<Kanban className="h-4 w-4" />} />
+        <Metrica rotulo="Valor em disputa" valor={formatCurrency(metricas.valorEmDisputa)} icone={<TrendingUp className="h-4 w-4" />} />
+        <Metrica rotulo="Ganho no mês" valor={formatCurrency(metricas.ganhoNoMes)} icone={<Trophy className="h-4 w-4" />} />
+        <Metrica rotulo="Taxa de conversão" valor={pct(metricas.conversao)} icone={<Target className="h-4 w-4" />} />
+        <Metrica rotulo="Margem média das ganhas" valor={pct(metricas.margemGanhas)} icone={<Target className="h-4 w-4" />} />
         <Metrica rotulo="Prazos em 7 dias" valor={String(metricas.proximos)} icone={<Clock className="h-4 w-4" />} destaque={metricas.proximos > 0} />
         <Metrica rotulo="Prazos vencidos" valor={String(metricas.vencidos)} icone={<AlertTriangle className="h-4 w-4" />} alerta={metricas.vencidos > 0} />
-        <Metrica rotulo="Ganhos / contratos" valor={String(metricas.ganhos)} icone={<Trophy className="h-4 w-4" />} />
+        <Metrica rotulo="Total de cartões" valor={String(metricas.total)} icone={<Kanban className="h-4 w-4" />} />
       </div>
 
       {metricas.vencidos > 0 && (
