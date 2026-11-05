@@ -256,9 +256,14 @@ export default function HomeContent() {
           <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 p-8 md:p-10">
             <div className="grid lg:grid-cols-[1.5fr_1fr] gap-8 items-center">
               <div>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider mb-3">
-                  <Zap className="w-3.5 h-3.5" /> {SICX.eyebrow}
-                </span>
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-bold uppercase tracking-wider">
+                    <Sparkles className="w-3.5 h-3.5" /> Nova lei
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider">
+                    <Zap className="w-3.5 h-3.5" /> {SICX.eyebrow}
+                  </span>
+                </div>
                 <h2 className="text-2xl md:text-3xl font-extrabold font-display text-slate-900 dark:text-white mb-3">
                   {SICX.nome}
                 </h2>
@@ -270,11 +275,16 @@ export default function HomeContent() {
                     </li>
                   ))}
                 </ul>
-                <Link href="/sicx">
-                  <button className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-white shadow-lg shadow-primary/25 hover:bg-primary-hover transition-all">
-                    Entender o SICX <ArrowRight className="w-4 h-4" />
-                  </button>
-                </Link>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Link href="/credenciamento-sicx">
+                    <button className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-600/25 hover:opacity-90 transition-all">
+                      Guia, almoxarifados e checklist <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </Link>
+                  <Link href="/sicx" className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline">
+                    Entender o SICX <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
               </div>
               <div className="grid grid-cols-1 gap-3">
                 {SICX.passos.slice(0, 3).map((p) => (

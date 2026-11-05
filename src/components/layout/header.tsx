@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Search, Bell, User, Menu, X, LogOut, Sparkles, LayoutGrid, Calculator } from 'lucide-react'
+import { Search, Bell, User, Menu, X, LogOut, Sparkles, LayoutGrid, Calculator, Zap } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
@@ -101,6 +101,11 @@ export default function Header() {
               <span className="absolute -right-0.5 -top-0.5 rounded bg-gradient-to-r from-secondary to-accent px-1 text-[8px] font-bold leading-3 text-white">NOVO</span>
             </Link>
 
+            <Link href="/credenciamento-sicx" className="relative hidden sm:block p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400" aria-label="SICX — Lei 15.266" title="SICX — Lei 15.266">
+              <Zap className="w-5 h-5" />
+              <span className="absolute -right-1 -top-0.5 rounded bg-gradient-to-r from-emerald-500 to-teal-500 px-1 text-[7px] font-bold leading-3 text-white">LEI</span>
+            </Link>
+
             <Link
               href="/ia-licitacoes"
               className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-secondary to-accent text-white text-xs font-bold hover:opacity-90 transition-all"
@@ -180,6 +185,7 @@ function MobileNav({
       title: 'Ferramentas principais',
       links: [
         { href: '/analista', label: 'Analista de Licitações · NOVO' },
+        { href: '/credenciamento-sicx', label: 'SICX / Lei 15.266 · NOVA LEI' },
         { href: '/estacao', label: 'Estação de Trabalho' },
       ],
     },

@@ -168,6 +168,24 @@ export default function SicxPage() {
 
       <div className="text-center mt-10">
         <h2 className="text-2xl font-extrabold font-display text-slate-900 dark:text-white mb-3">
+          Guia prático, almoxarifados e ferramentas
+        </h2>
+        <p className="text-slate-500 dark:text-slate-400 mb-6">
+          Veja o passo a passo do fornecedor, o diretório de almoxarifados virtuais, o checklist de preparo e as
+          ferramentas de apoio do Painel PNCP.
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <Link href="/credenciamento-sicx">
+            <Button size="lg">Abrir o guia completo</Button>
+          </Link>
+          <Link href="/cadastro">
+            <Button size="lg" variant="outline">Começar agora</Button>
+          </Link>
+        </div>
+      </div>
+
+      <div className="text-center mt-10">
+        <h2 className="text-2xl font-extrabold font-display text-slate-900 dark:text-white mb-3">
           Acompanhe as oportunidades do SICX
         </h2>
         <p className="text-slate-500 dark:text-slate-400 mb-6">

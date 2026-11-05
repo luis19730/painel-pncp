@@ -20,12 +20,24 @@ import { SICX } from '@/content/sicx'
 // Todas as rotas/funções existentes foram mantidas (apenas reagrupadas e
 // renomeadas). Nenhuma rota mudou — não há redirects 301 necessários.
 // ============================================================================
-const navGroups = [
-  {
+interface NavItem {
+  href: string
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  premium?: boolean
+  external?: boolean
+  title?: string
+  badge?: string
+  badgeTone?: 'novo' | 'lei'
+  highlight?: boolean
+}
+
+const navGroups: Array<{ label: string; destaque?: boolean; items: NavItem[] }> = [  {
     label: 'FERRAMENTAS PRINCIPAIS',
     destaque: true,
     items: [
       { href: '/analista', label: 'Analista de Licitações', icon: Calculator, badge: 'NOVO', highlight: true },
+      { href: '/credenciamento-sicx', label: 'SICX / Lei 15.266', icon: Zap, badge: 'NOVA LEI', badgeTone: 'lei', highlight: true, title: SICX.resumo },
       { href: '/estacao', label: 'Estação de Trabalho', icon: LayoutGrid, highlight: true },
     ],
   },
@@ -36,7 +48,6 @@ const navGroups = [
       { href: '/oportunidades', label: 'Editais abertos', icon: Search },
       { href: '/busca', label: 'Busca avançada', icon: Search },
       { href: '/modalidades', label: 'Modalidades', icon: Layers },
-      { href: '/credenciamento-sicx', label: 'SICX / Compras Expressas', icon: Zap, title: SICX.resumo },
       { href: '/score', label: 'Score de oportunidade', icon: Gauge },
     ],
   },
@@ -131,7 +142,7 @@ function NavSection({
   destaque,
 }: {
   title?: string
-  items: { href: string; label: string; icon: React.ComponentType<{ className?: string }>; premium?: boolean; external?: boolean; title?: string; badge?: string; highlight?: boolean }[]
+  items: NavItem[]
   pathname: string
   destaque?: boolean
 }) {
@@ -178,7 +189,14 @@ function NavSection({
               )}
               <span className="flex-1 truncate">{item.label}</span>
               {item.badge && (
-                <span className="text-[9px] font-bold text-white bg-gradient-to-r from-secondary to-accent px-1.5 py-0.5 rounded">
+                <span
+                  className={cn(
+                    'text-[9px] font-bold text-white px-1.5 py-0.5 rounded',
+                    item.badgeTone === 'lei'
+                      ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
+                      : 'bg-gradient-to-r from-secondary to-accent'
+                  )}
+                >
                   {item.badge}
                 </span>
               )}

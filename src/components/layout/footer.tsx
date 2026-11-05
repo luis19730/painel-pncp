@@ -26,7 +26,13 @@ export default function Footer() {
             <h4 className="font-semibold text-white text-sm mb-3">Recursos</h4>
             <div className="space-y-2">
               <FooterLink href="/precos">Mapa de Preços</FooterLink>
-              <FooterLink href="/sicx">Compras Expressas (SICX)</FooterLink>
+              <FooterLink href="/credenciamento-sicx">
+                SICX · Lei 15.266
+                <span className="ml-1.5 rounded bg-gradient-to-r from-emerald-500 to-teal-500 px-1 py-0.5 text-[9px] font-bold uppercase text-white">
+                  Nova lei
+                </span>
+              </FooterLink>
+              <FooterLink href="/sicx">O que é o SICX</FooterLink>
               <FooterLink href="/concorrentes">Concorrentes</FooterLink>
               <FooterLink href="/analise-edital">Análise de Edital</FooterLink>
               <FooterLink href="/ia-licitacoes">IA de Licitações</FooterLink>

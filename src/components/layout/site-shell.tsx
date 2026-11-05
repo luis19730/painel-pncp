@@ -4,6 +4,7 @@ import Logo from '@/components/layout/logo'
 import ThemeToggle from '@/components/layout/theme-toggle'
 import Button from '@/components/ui/button'
 import MarketingMenu from '@/components/layout/marketing-menu'
+import BannerNovaLei from '@/components/layout/banner-nova-lei'
 
 // ============================================================================
 // Shell público do site (header + main + footer), compartilhado pelos route
@@ -20,6 +21,7 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
 
           <nav className="hidden md:flex items-center gap-8">
             <NavLink href="/#como-funciona">Como funciona</NavLink>
+            <NavLink href="/credenciamento-sicx">SICX · Nova lei</NavLink>
             <NavLink href="/precos">Mapa de Preços</NavLink>
             <NavLink href="/planos">Planos</NavLink>
             <NavLink href="/sobre">Sobre</NavLink>
@@ -40,6 +42,8 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
+
+      <BannerNovaLei />
 
       <main className="flex-1">{children}</main>
 

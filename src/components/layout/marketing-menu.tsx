@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 
 const links = [
   { href: '/#como-funciona', label: 'Como funciona' },
+  { href: '/credenciamento-sicx', label: 'SICX · Nova lei' },
   { href: '/precos', label: 'Mapa de Preços' },
   { href: '/planos', label: 'Planos' },
   { href: '/sobre', label: 'Sobre' },

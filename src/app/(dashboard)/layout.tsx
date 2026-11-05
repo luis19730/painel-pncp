@@ -2,6 +2,7 @@
 
 import Sidebar from '@/components/layout/sidebar';
 import Header from '@/components/layout/header';
+import BannerNovaLei from '@/components/layout/banner-nova-lei';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -9,6 +10,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header />
+        <BannerNovaLei />
         <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-slate-50 dark:bg-[#0b1120]">
           <div className="max-w-7xl mx-auto">{children}</div>
         </main>

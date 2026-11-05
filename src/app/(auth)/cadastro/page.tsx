@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Calculator, LayoutGrid, Zap } from 'lucide-react'
+import { Calculator, LayoutGrid, Sparkles, Zap } from 'lucide-react'
 import CadastroForm from '@/components/auth/cadastro-form'
 import { SICX } from '@/content/sicx'
 
@@ -66,8 +66,13 @@ export default function CadastroPage() {
 
       {/* Bloco resumido do SICX (conteúdo em src/content/sicx.ts) */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-700 p-6">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider mb-3">
-          <Zap className="w-3.5 h-3.5" /> Compras Expressas (SICX)
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-bold uppercase tracking-wider">
+            <Sparkles className="w-3.5 h-3.5" /> Nova lei
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider">
+            <Zap className="w-3.5 h-3.5" /> Compras Expressas (SICX)
+          </span>
         </div>
         <h2 className="text-lg font-extrabold font-display text-slate-900 dark:text-white mb-2">{SICX.nome}</h2>
         <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-3">{SICX.resumo}</p>
@@ -78,9 +83,17 @@ export default function CadastroPage() {
             </li>
           ))}
         </ul>
-        <Link href="/sicx" className="text-sm font-semibold text-primary hover:underline">
-          Saber mais sobre o SICX →
-        </Link>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href="/credenciamento-sicx"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+          >
+            Guia, almoxarifados e checklist →
+          </Link>
+          <Link href="/sicx" className="text-sm font-semibold text-primary hover:underline">
+            Saber mais sobre o SICX →
+          </Link>
+        </div>
       </div>
 
       {/* Ferramentas principais: Analista + Estação */}
