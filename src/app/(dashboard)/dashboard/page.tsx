@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { TrendingUp, FileText, Clock, AlertTriangle, Heart, DollarSign, Search, Radar, ArrowRight, Building2, AlertCircle, Calendar, Sparkles, Users, CheckCircle2, FileSearch } from 'lucide-react';
+import { TrendingUp, FileText, Clock, AlertTriangle, Heart, DollarSign, Search, Radar, ArrowRight, Building2, AlertCircle, Calendar, Sparkles, Users, CheckCircle2, FileSearch, Calculator, LayoutGrid } from 'lucide-react';
 import OpportunityCard from '@/components/opportunities/opportunity-card';
 import StatCard from '@/components/ui/stat-card';
 import PageHeader from '@/components/ui/page-header';
@@ -289,6 +289,45 @@ export default function DashboardPage() {
             : 'Indicadores indisponíveis no momento (fonte PNCP não respondeu)'
         }
       />
+
+      {/* FERRAMENTAS PRINCIPAIS — destaque no topo do dashboard */}
+      <section aria-labelledby="titulo-ferramentas-principais" className="space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 id="titulo-ferramentas-principais" className="flex items-center gap-2 font-display text-sm font-bold text-slate-900 dark:text-white">
+            <Sparkles className="h-4 w-4 text-primary" /> Ferramentas principais
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Os dois centros de trabalho do Painel PNCP.</p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <Link
+            href="/analista"
+            className="group relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary via-primary to-secondary p-5 text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          >
+            <span className="absolute right-4 top-4 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide">Novo</span>
+            <Calculator className="mb-3 h-9 w-9 text-white/90" aria-hidden="true" />
+            <h3 className="font-display text-lg font-extrabold">Analista de Licitações</h3>
+            <p className="mt-1 max-w-md text-sm text-white/85">
+              Calcule frete, custos, impostos e margem em tempo real. Simule lances, compare cenários e envie a oportunidade direto para o Kanban.
+            </p>
+            <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold">
+              Abrir o Analista <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </span>
+          </Link>
+          <Link
+            href="/estacao"
+            className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900"
+          >
+            <LayoutGrid className="mb-3 h-9 w-9 text-primary" aria-hidden="true" />
+            <h3 className="font-display text-lg font-extrabold text-slate-900 dark:text-white">Estação de Trabalho</h3>
+            <p className="mt-1 max-w-md text-sm text-slate-500 dark:text-slate-400">
+              Acompanhe cada edital do primeiro contato ao resultado, com prazos, documentos e o Kanban da sua operação.
+            </p>
+            <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-primary">
+              Abrir a Estação <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </span>
+          </Link>
+        </div>
+      </section>
 
       <ResumoEstacao />
 

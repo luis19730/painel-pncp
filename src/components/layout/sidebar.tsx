@@ -9,18 +9,26 @@ import {
   Sparkles, Layers, ShieldAlert,
   ListChecks, FileCheck, FolderOpen,
   Star, FileBarChart, Calendar,
-  Building2, Settings, HelpCircle, Type, Zap, Home, LayoutGrid
+  Building2, Settings, HelpCircle, Type, Zap, Home, LayoutGrid, Calculator
 } from 'lucide-react'
 import { SICX } from '@/content/sicx'
 
 // ============================================================================
 // Navegação organizada pela JORNADA de quem trabalha com licitações:
-//   ENCONTRAR → ANALISAR → PRECIFICAR → MONTAR PROCESSO → ACOMPANHAR
-//   + CONCORRENTES e APRENDER.
+//   FERRAMENTAS PRINCIPAIS → ENCONTRAR → ANALISAR → PRECIFICAR → MONTAR
+//   PROCESSO → ACOMPANHAR + CONCORRENTES e APRENDER.
 // Todas as rotas/funções existentes foram mantidas (apenas reagrupadas e
 // renomeadas). Nenhuma rota mudou — não há redirects 301 necessários.
 // ============================================================================
 const navGroups = [
+  {
+    label: 'FERRAMENTAS PRINCIPAIS',
+    destaque: true,
+    items: [
+      { href: '/analista', label: 'Analista de Licitações', icon: Calculator, badge: 'NOVO', highlight: true },
+      { href: '/estacao', label: 'Estação de Trabalho', icon: LayoutGrid, highlight: true },
+    ],
+  },
   {
     label: 'ENCONTRAR',
     items: [
@@ -62,7 +70,6 @@ const navGroups = [
   {
     label: 'ACOMPANHAR',
     items: [
-      { href: '/estacao', label: 'Minha Estação', icon: LayoutGrid },
       { href: '/estacao/prazos', label: 'Prazos da estação', icon: Calendar },
       { href: '/meu-radar', label: 'Meu Radar', icon: Radar },
       { href: '/alertas', label: 'Alertas', icon: Bell },
@@ -108,7 +115,7 @@ export default function Sidebar() {
 
       <nav className="flex-1 py-4 overflow-y-auto">
         {navGroups.map((group) => (
-          <NavSection key={group.label} title={group.label} items={group.items} pathname={pathname} />
+          <NavSection key={group.label} title={group.label} destaque={'destaque' in group && group.destaque} items={group.items} pathname={pathname} />
         ))}
         <div className="border-t border-slate-100 dark:border-slate-800 my-3" />
         <NavSection items={bottomNav} pathname={pathname} />
@@ -121,15 +128,20 @@ function NavSection({
   title,
   items,
   pathname,
+  destaque,
 }: {
   title?: string
-  items: { href: string; label: string; icon: React.ComponentType<{ className?: string }>; premium?: boolean; external?: boolean; title?: string }[]
+  items: { href: string; label: string; icon: React.ComponentType<{ className?: string }>; premium?: boolean; external?: boolean; title?: string; badge?: string; highlight?: boolean }[]
   pathname: string
+  destaque?: boolean
 }) {
   return (
-    <div className="px-3 mb-4">
+    <div className={cn('px-3 mb-4', destaque && 'mx-2 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-white to-secondary/5 p-2 dark:from-primary/10 dark:via-slate-900 dark:to-secondary/10')}>
       {title && (
-        <p className="px-3 mb-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+        <p className={cn(
+          'px-3 mb-2 text-[10px] font-bold uppercase tracking-widest',
+          destaque ? 'text-primary dark:text-primary' : 'text-slate-400 dark:text-slate-500'
+        )}>
           {title}
         </p>
       )}
@@ -146,13 +158,30 @@ function NavSection({
               title={item.title}
               className={cn(
                 'group flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-150',
+                item.highlight && !active && 'font-semibold text-slate-800 dark:text-slate-100',
                 active
                   ? 'bg-gradient-to-r from-primary/10 to-secondary/10 text-primary dark:text-primary border border-primary/20'
-                  : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800/60 border border-transparent'
+                  : item.highlight
+                    ? 'hover:bg-white/70 dark:hover:bg-slate-800/60 border border-transparent'
+                    : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800/60 border border-transparent'
               )}
             >
-              <Icon className={cn('w-[18px] h-[18px] shrink-0', active ? 'text-primary' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-600')} />
+              {item.highlight ? (
+                <span className={cn(
+                  'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg',
+                  active ? 'bg-primary text-white' : 'bg-primary/10 text-primary'
+                )}>
+                  <Icon className="w-4 h-4" />
+                </span>
+              ) : (
+                <Icon className={cn('w-[18px] h-[18px] shrink-0', active ? 'text-primary' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-600')} />
+              )}
               <span className="flex-1 truncate">{item.label}</span>
+              {item.badge && (
+                <span className="text-[9px] font-bold text-white bg-gradient-to-r from-secondary to-accent px-1.5 py-0.5 rounded">
+                  {item.badge}
+                </span>
+              )}
               {item.premium && (
                 <span className="text-[9px] font-bold text-secondary bg-secondary/10 px-1.5 py-0.5 rounded">IA</span>
               )}

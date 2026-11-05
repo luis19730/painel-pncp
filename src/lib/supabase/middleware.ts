@@ -76,6 +76,7 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith('/sinapi') ||
     pathname.startsWith('/credenciamento-sicx') ||
     pathname.startsWith('/estacao') ||
+    pathname.startsWith('/analista') ||
     pathname.startsWith('/checkout') ||
     pathname.startsWith('/minha-assinatura')
 

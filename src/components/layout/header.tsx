@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Search, Bell, User, Menu, X, LogOut, Sparkles, LayoutGrid } from 'lucide-react'
+import { Search, Bell, User, Menu, X, LogOut, Sparkles, LayoutGrid, Calculator } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
@@ -92,8 +92,13 @@ export default function Header() {
               <Bell className="w-5 h-5" />
             </Link>
 
-            <Link href="/estacao" className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400" aria-label="Minha Estação" title="Minha Estação">
+            <Link href="/estacao" className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400" aria-label="Estação de Trabalho" title="Estação de Trabalho">
               <LayoutGrid className="w-5 h-5" />
+            </Link>
+
+            <Link href="/analista" className="relative p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400" aria-label="Analista de Licitações" title="Analista de Licitações">
+              <Calculator className="w-5 h-5" />
+              <span className="absolute -right-0.5 -top-0.5 rounded bg-gradient-to-r from-secondary to-accent px-1 text-[8px] font-bold leading-3 text-white">NOVO</span>
             </Link>
 
             <Link
@@ -172,11 +177,17 @@ function MobileNav({
   if (typeof document === 'undefined') return null
   const groups = [
     {
+      title: 'Ferramentas principais',
+      links: [
+        { href: '/analista', label: 'Analista de Licitações · NOVO' },
+        { href: '/estacao', label: 'Estação de Trabalho' },
+      ],
+    },
+    {
       title: 'Encontrar',
       links: [
         { href: '/dashboard', label: 'Oportunidades' },
         { href: '/busca', label: 'Buscar' },
-        { href: '/estacao', label: 'Minha Estação' },
         { href: '/estacao/prazos', label: 'Prazos da estação' },
         { href: '/meu-radar', label: 'Meu Radar' },
         { href: '/alertas', label: 'Alertas' },

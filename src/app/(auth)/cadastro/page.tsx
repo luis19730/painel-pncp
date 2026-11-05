@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Zap } from 'lucide-react'
+import { Calculator, LayoutGrid, Zap } from 'lucide-react'
 import CadastroForm from '@/components/auth/cadastro-form'
 import { SICX } from '@/content/sicx'
 
@@ -45,6 +45,9 @@ export default function CadastroPage() {
             'Organização das referências encontradas',
             'Comparação de preços',
             'Geração de relatório',
+            'Analista de Licitações: viabilidade, margem e simulação de lances',
+            'Kanban de oportunidades integrado ao analista',
+            'Estação de Trabalho para acompanhar cada edital',
             'Consulta ao SICX (Compras Expressas)',
             'Ferramentas para apoio à contratação pública',
             'Acesso a outras funcionalidades do Painel PNCP',
@@ -78,6 +81,28 @@ export default function CadastroPage() {
         <Link href="/sicx" className="text-sm font-semibold text-primary hover:underline">
           Saber mais sobre o SICX →
         </Link>
+      </div>
+
+      {/* Ferramentas principais: Analista + Estação */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/5 to-secondary/5 p-6 dark:from-primary/10 dark:to-secondary/10">
+          <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white">
+            <Calculator className="h-5 w-5" />
+          </span>
+          <h2 className="text-base font-extrabold font-display text-slate-900 dark:text-white">Analista de Licitações</h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Descubra se a oportunidade vale a pena: frete, impostos, custos, margem, preço mínimo e simulação de lances — com Kanban integrado.
+          </p>
+        </div>
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-900">
+          <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <LayoutGrid className="h-5 w-5" />
+          </span>
+          <h2 className="text-base font-extrabold font-display text-slate-900 dark:text-white">Estação de Trabalho</h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Acompanhe cada licitação do edital ao resultado, com prazos, notas, checklist e documentos em um só lugar.
+          </p>
+        </div>
       </div>
 
       {/* Onboarding em 3 passos */}

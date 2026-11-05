@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   Search, Target, TrendingUp, Bell, Radar, Sparkles,
   ArrowRight, Shield, Check, Gauge, Layers, FileBarChart, ExternalLink,
-  ClipboardList, History, SearchCheck, BarChart3, ListTree, FileText, Zap, Crosshair, LayoutGrid,
+  ClipboardList, History, SearchCheck, BarChart3, ListTree, FileText, Zap, Crosshair, LayoutGrid, Calculator,
 } from 'lucide-react'
 import { searchLiveOpportunities, searchLivePriceData, priceStatsFromRecords } from '@/lib/pncp-data'
 import type { PriceStats } from '@/lib/market-data'
@@ -17,6 +17,7 @@ import { SICX } from '@/content/sicx'
 // Funções principais da home. "previa" é um rótulo do mock visual; para usar
 // prints reais, substitua o bloco de prévia por uma <Image> da tela.
 const RECURSOS = [
+  { icon: Calculator, titulo: 'Analista de Licitações', desc: 'Calcule frete, custos, impostos, margem e preço mínimo em tempo real, simule lances e acompanhe tudo no Kanban.', previa: 'Calculadora de viabilidade e Kanban de oportunidades' },
   { icon: Search, titulo: 'Busca avançada', desc: 'Filtre editais por UF, município, órgão, modalidade, palavra-chave e faixa de valor.', previa: 'Lista de editais com filtros e score' },
   { icon: TrendingUp, titulo: 'Pesquisa de preços', desc: 'Consulte referências e histórico de preços praticados em contratações públicas.', previa: 'Tabela de preços e faixa de referência' },
   { icon: Sparkles, titulo: 'Análise de edital com IA', desc: 'Resumo de objeto, exigências, prazos, riscos e documentos necessários.', previa: 'Resumo do edital gerado por IA' },
@@ -598,7 +599,8 @@ export default function HomeContent() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
             <FeatureCard icon={Target} title="Score de Oportunidade" desc="Metodologia transparente que identifica as melhores oportunidades para o seu perfil." />
-            <FeatureCard icon={LayoutGrid} title="Minha Estação" desc="Acompanhe suas licitações do edital ao resultado, com prazos, notas e checklist em um só lugar." />
+            <FeatureCard icon={Calculator} title="Analista de Licitações" desc="Calculadora de viabilidade com frete, impostos, margem, simulação de lances e Kanban integrado." />
+            <FeatureCard icon={LayoutGrid} title="Estação de Trabalho" desc="Acompanhe suas licitações do edital ao resultado, com prazos, notas e checklist em um só lugar." />
             <FeatureCard icon={Radar} title="Radar Personalizado" desc="Filtros avançados por CNAE, região, valor e status." />
             <FeatureCard icon={Bell} title="Alertas Inteligentes" desc="Notificações quando novas oportunidades combinam com seu perfil." />
             <FeatureCard icon={TrendingUp} title="Preços Históricos" desc="Dados reais para fundamentar suas propostas." />

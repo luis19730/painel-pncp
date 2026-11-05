@@ -6,6 +6,7 @@ import { ArrowLeft, ExternalLink, Calendar, MapPin, Building2, FileText, DollarS
 import { ScoreBadge } from '@/components/opportunities/score-badge';
 import FavoriteButton from '@/components/opportunities/favorite-button';
 import BotaoEstacao from '@/components/estacao/botao-estacao';
+import BotaoAnalista from '@/components/analista/botao-analista';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency, formatDate, getStatusColor } from '@/lib/utils';
 import { getOpportunityById, mapItem, isPncpeditalLink, buildPncpEditalUrl, decodePncpParam } from '@/lib/pncp';
@@ -183,6 +184,20 @@ export default function OportunidadeDetailPage() {
           <p className="text-sm text-slate-500 dark:text-slate-400 truncate">ID: {item.id}</p>
         </div>
         <div className="ml-auto flex items-center gap-2 flex-wrap">
+          <BotaoAnalista
+            item={{
+              numero_controle_pncp: item.id,
+              orgao: item.orgao,
+              uf: item.uf,
+              municipio: item.municipio,
+              objeto: item.objeto,
+              modalidade: item.modalidade,
+              valor_estimado: item.valor ?? null,
+              data_abertura: item.dataAbertura ?? null,
+              data_encerramento_proposta: item.dataEncerramento ?? null,
+              link_pncp: editalUrl,
+            }}
+          />
           <BotaoEstacao
             item={{
               numero_controle_pncp: item.id,
