@@ -156,6 +156,12 @@ create table if not exists public.sicx_almoxarifados (
 
 alter table public.sicx_almoxarifados enable row level security;
 
+-- Colunas de verificação de links (idempotente para bancos migrados antes).
+alter table public.sicx_almoxarifados
+  add column if not exists falhas_consecutivas integer not null default 0;
+alter table public.sicx_almoxarifados
+  add column if not exists situacao_anterior text;
+
 -- O público não vê registros "em revisão" (2 falhas seguidas na verificação).
 drop policy if exists "sicx_almoxarifados_select_public" on public.sicx_almoxarifados;
 create policy "sicx_almoxarifados_select_public" on public.sicx_almoxarifados
