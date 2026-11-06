@@ -364,3 +364,47 @@ export function paraCSV(cabecalhos: string[], linhas: Array<Array<string | numbe
   }
   return [cabecalhos.map(escapar).join(';'), ...linhas.map((l) => l.map(escapar).join(';'))].join('\r\n')
 }
+
+// ---------------------------------------------------------------------------
+// Estatísticas do diretório de almoxarifados (KPIs e contagem por UF)
+// ---------------------------------------------------------------------------
+export interface EstatisticasDiretorio {
+  total: number
+  ufsComRegistros: number
+  novos7dias: number
+  /** sigla -> quantidade (apenas UFs com pelo menos 1 registro). */
+  contagemPorUf: Record<string, number>
+}
+
+/**
+ * Agrega o diretório a partir da LISTA COMPLETA (nunca de uma página
+ * filtrada), para que as contagens por UF fiquem corretas inclusive quando a
+ * tabela é paginada na interface.
+ */
+export function estatisticasDiretorio(
+  almoxarifados: Array<{ uf?: string | null; criado_em?: string | null }>,
+  referencia = new Date()
+): EstatisticasDiretorio {
+  const contagemPorUf: Record<string, number> = {}
+  const limite = new Date(referencia)
+  limite.setDate(limite.getDate() - 7)
+  limite.setHours(0, 0, 0, 0)
+
+  let novos7dias = 0
+  for (const a of almoxarifados) {
+    const uf = (a.uf || '').trim().toUpperCase()
+    if (uf) contagemPorUf[uf] = (contagemPorUf[uf] || 0) + 1
+
+    if (a.criado_em) {
+      const criado = new Date(a.criado_em)
+      if (!Number.isNaN(criado.getTime()) && criado >= limite) novos7dias += 1
+    }
+  }
+
+  return {
+    total: almoxarifados.length,
+    ufsComRegistros: Object.keys(contagemPorUf).length,
+    novos7dias,
+    contagemPorUf,
+  }
+}

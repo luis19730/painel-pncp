@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   calcularMargemOferta,
   certidoesEmAlerta,
+  estatisticasDiretorio,
   indiceCompetitividade,
   inferirCategoria,
   mediana,
@@ -13,6 +14,7 @@ import {
   resumoMercado,
   round2,
 } from './calc.ts'
+import { UFS, normalizarUf } from './ufs.ts'
 
 test('round2 arredonda centavos sem erro de ponto flutuante', () => {
   assert.equal(round2(1.005), 1.01)
@@ -145,4 +147,39 @@ test('moeda formata em reais', () => {
   const texto = moeda(1234.5).replace(/\u00a0/g, ' ')
   assert.ok(texto.includes('1.234,50'))
   assert.ok(texto.includes('R$'))
+})
+
+test('UFS tem as 27 unidades da federação', () => {
+  assert.equal(UFS.length, 27)
+  assert.ok(UFS.some((u) => u.sigla === 'DF'))
+  assert.ok(UFS.every((u) => /^[A-Z]{2}$/.test(u.sigla)))
+})
+
+test('normalizarUf converte sigla, nome por extenso e grafias sujas', () => {
+  assert.equal(normalizarUf('sp'), 'SP')
+  assert.equal(normalizarUf(' SP '), 'SP')
+  assert.equal(normalizarUf('São Paulo'), 'SP')
+  assert.equal(normalizarUf('SAO PAULO'), 'SP')
+  assert.equal(normalizarUf('Espírito Santo'), 'ES')
+  assert.equal(normalizarUf(null), null)
+  assert.equal(normalizarUf(''), null)
+  assert.equal(normalizarUf('XX'), null)
+})
+
+test('estatisticasDiretorio agrega por UF e conta novos em 7 dias', () => {
+  const ref = new Date('2026-11-06T12:00:00')
+  const r = estatisticasDiretorio(
+    [
+      { uf: 'SP', criado_em: '2026-11-05T10:00:00Z' },
+      { uf: 'sp', criado_em: '2026-11-05T10:00:00Z' },
+      { uf: 'MG', criado_em: '2026-10-01T10:00:00Z' },
+      { uf: null, criado_em: null },
+    ],
+    ref
+  )
+  assert.equal(r.total, 4)
+  assert.equal(r.ufsComRegistros, 2)
+  assert.equal(r.novos7dias, 2)
+  assert.equal(r.contagemPorUf.SP, 2)
+  assert.equal(r.contagemPorUf.MG, 1)
 })

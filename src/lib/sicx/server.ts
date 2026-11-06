@@ -15,6 +15,7 @@ import {
   NORMAS_PADRAO,
   STATUS_OBJETO_PADRAO,
 } from './conteudo'
+import { normalizarUf } from './ufs'
 import type { SicxAlmoxarifado, SicxConteudo, SicxNorma, SicxStatus } from './types'
 
 function clientePublico() {
@@ -54,11 +55,12 @@ export async function carregarConteudoSicx(): Promise<SicxConteudo> {
         .order('data_publicacao', { ascending: false }),
       supabase
         .from('sicx_almoxarifados')
-        .select('id, nome, orgao, esfera, uf, tipo, situacao, descricao, como_participar, url_site, url_norma, url_edital, verificado_em, status_link, ordem')
+        .select('id, nome, orgao, esfera, uf, tipo, situacao, descricao, como_participar, url_site, url_norma, url_edital, verificado_em, status_link, ordem, criado_em')
         .eq('ativo', true)
         .neq('situacao', 'em_revisao')
         .order('ordem', { ascending: true })
-        .order('nome', { ascending: true }),
+        .order('nome', { ascending: true })
+        .limit(5000),
     ])
 
     if (statusRes.error && normasRes.error && almoxRes.error) {
@@ -72,7 +74,10 @@ export async function carregarConteudoSicx(): Promise<SicxConteudo> {
 
     const status = (statusRes.data as SicxStatus | null) ?? STATUS_OBJETO_PADRAO
     const normas = (normasRes.data as SicxNorma[] | null) ?? []
-    const almoxarifados = (almoxRes.data as SicxAlmoxarifado[] | null) ?? []
+    const almoxarifados = ((almoxRes.data as SicxAlmoxarifado[] | null) ?? []).map((a) => ({
+      ...a,
+      uf: normalizarUf(a.uf),
+    }))
 
     return {
       status,

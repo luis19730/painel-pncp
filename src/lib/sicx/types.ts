@@ -48,6 +48,7 @@ export interface SicxAlmoxarifado {
   verificado_em: string | null
   status_link: 'verificado' | 'a_verificar' | 'em_revisao'
   ordem: number
+  criado_em?: string | null
 }
 
 export interface SicxConteudo {
