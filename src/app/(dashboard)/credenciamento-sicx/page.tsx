@@ -118,11 +118,7 @@ export default async function CredenciamentoSicxPage({
             <ul className="space-y-0.5 text-[11px]">
               {FONTES_OFICIAIS.map((f) => (
                 <li key={f.label}>
-                  {f.url === SICX_URLS.pncp ? (
-                    <span className="text-slate-400">{f.label} — link a verificar</span>
-                  ) : (
-                    <a href={f.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-slate-500 hover:text-primary dark:text-slate-400 hover:underline">{f.label} <ExternalLink className="w-3 h-3" /></a>
-                  )}
+                  <a href={f.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-slate-500 hover:text-primary dark:text-slate-400 hover:underline">{f.label} <ExternalLink className="w-3 h-3" /></a>
                 </li>
               ))}
             </ul>

@@ -10,7 +10,7 @@ import Preparo from '@/components/sicx/preparo'
 import type { SicxNorma, SicxStatus } from '@/lib/sicx/types'
 import {
   COMPARATIVO, ESFERAS, FAQ, FONTES_OFICIAIS, GLOSSARIO, GUIA_ORGAO,
-  NOTA_ESFERAS, PASSOS, RANKING, RESUMO_60S, SICX_URLS, TEXTO_BASE, TIMELINE,
+  NOTA_ESFERAS, PASSOS, RANKING, RESUMO_60S, TEXTO_BASE, TIMELINE,
 } from '@/lib/sicx/conteudo'
 import { dataBR } from '@/lib/sicx/calc'
 import { cn } from '@/lib/utils'
@@ -268,11 +268,7 @@ function AbaLinks({ normas }: { normas: SicxNorma[] }) {
         <ul className="space-y-1.5">
           {FONTES_OFICIAIS.map((f) => (
             <li key={f.label} className="text-sm">
-              {f.url === SICX_URLS.pncp ? (
-                <span className="text-slate-400">{f.label} — link a verificar</span>
-              ) : (
-                <a href={f.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">{f.label} <ExternalLink className="w-3 h-3" /></a>
-              )}
+              <a href={f.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">{f.label} <ExternalLink className="w-3 h-3" /></a>
             </li>
           ))}
         </ul>

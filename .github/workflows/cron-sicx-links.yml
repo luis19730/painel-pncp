@@ -1,6 +1,7 @@
-name: SICX — validação semanal de links
+name: SICX — atualização automática de links e almoxarifados
 
-# Verifica os links do diretório de almoxarifados e das normas do SICX.
+# Verifica DIARIAMENTE os links do diretório de almoxarifados e das normas do
+# SICX, atualizando status_link e verificado_em de cada registro automaticamente.
 # 2 falhas consecutivas colocam o registro "em revisão" (some da lista pública).
 #
 # Secrets necessários (Settings > Secrets and variables > Actions):
@@ -9,8 +10,8 @@ name: SICX — validação semanal de links
 
 on:
   schedule:
-    # Toda segunda-feira, 06:15 UTC (03:15 de Brasília).
-    - cron: '15 6 * * 1'
+    # Todos os dias, 06:15 UTC (03:15 de Brasília).
+    - cron: '15 6 * * *'
   workflow_dispatch:
 
 jobs:

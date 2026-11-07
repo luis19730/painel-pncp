@@ -601,7 +601,7 @@ select * from (values
   ('Compras.gov.br / SICAF', 'portal', 'Ministério da Gestão e da Inovação em Serviços Públicos', null,
    'https://www.gov.br/compras/pt-br', now(), 'verificado', false, 3, true),
   ('PNCP — Portal Nacional de Contratações Públicas', 'portal', 'Governo Federal', null,
-   'https://pncp.gov.br', null, 'a_verificar', false, 4, true),
+   'https://pncp.gov.br', now(), 'verificado', false, 4, true),
   ('Informativo nº 234 — Justen, Pereira, Oliveira e Talamini', 'leitura', 'Justen, Pereira, Oliveira e Talamini', date '2026-08-01',
    'https://justen.com.br/wp-content/uploads/2026/08/IE-234-Nester-SICX.pdf', now(), 'verificado', false, 5, true),
   ('A Administração pode instituir almoxarifados virtuais? — Zênite', 'leitura', 'Zênite', null,

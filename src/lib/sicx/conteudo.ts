@@ -741,7 +741,7 @@ export const NORMAS_PADRAO: SicxNorma[] = [
   {
     id: 'pncp', titulo: 'PNCP — Portal Nacional de Contratações Públicas',
     tipo: 'portal', orgao: 'Governo Federal', data_publicacao: null,
-    url: SICX_URLS.pncp, verificado_em: null, status_link: 'a_verificar', destaque: false, ordem: 4,
+    url: SICX_URLS.pncp, verificado_em: SICX_ATUALIZADO_EM, status_link: 'verificado', destaque: false, ordem: 4,
   },
   {
     id: 'justen', titulo: 'Informativo nº 234 — Justen, Pereira, Oliveira e Talamini',
