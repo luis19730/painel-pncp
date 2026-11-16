@@ -38,6 +38,8 @@ export interface SicxAlmoxarifado {
   orgao: string | null
   esfera: Esfera | string
   uf: string | null
+  municipio?: string | null
+  ramo?: string | null
   tipo: TipoAlmoxarifado | string
   situacao: SituacaoAlmoxarifado | string
   descricao: string | null

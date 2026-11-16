@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import type { SicxAlmoxarifado } from '@/lib/sicx/types'
 import { UFS } from '@/lib/sicx/ufs'
+import { RAMOS } from '@/lib/sicx/conteudo'
 import type { EstatisticasDiretorio } from '@/lib/sicx/calc'
 import { dataBR, paraCSV } from '@/lib/sicx/calc'
 import { apiSicxPublico } from '@/lib/sicx/client'
@@ -43,6 +44,8 @@ const FAV_KEY = 'sicx-favoritos'
 export interface Filtros {
   busca: string
   ufs: string[]
+  municipio: string
+  ramo: string
   esfera: string
   tipo: string
   situacao: string
@@ -78,6 +81,8 @@ function queryDeFiltros(f: Filtros): string {
   const p = new URLSearchParams()
   if (f.busca) p.set('q', f.busca)
   if (f.ufs.length) p.set('uf', f.ufs.join(','))
+  if (f.municipio) p.set('municipio', f.municipio)
+  if (f.ramo) p.set('ramo', f.ramo)
   if (f.esfera) p.set('esfera', f.esfera)
   if (f.tipo) p.set('tipo', f.tipo)
   if (f.situacao) p.set('situacao', f.situacao)
@@ -155,20 +160,35 @@ export default function Diretorio({
     return d
   }, [])
 
+  const municipios = useMemo(
+    () =>
+      [...new Set(almoxarifados.map((a) => (a.municipio || '').trim()).filter(Boolean))].sort((a, b) =>
+        a.localeCompare(b, 'pt-BR')
+      ),
+    [almoxarifados]
+  )
+
   const filtrados = useMemo(() => {
     const termo = filtros.busca.trim().toLowerCase()
     const ufSet = new Set(filtros.ufs)
+    const municipioFiltro = filtros.municipio.trim().toLowerCase()
+    const ramoFiltro = filtros.ramo
     return almoxarifados.filter((a) => {
       if (filtros.soNovos) {
         const criado = a.criado_em ? new Date(a.criado_em) : null
         if (!criado || Number.isNaN(criado.getTime()) || criado < hoje7) return false
       }
       if (ufSet.size && !ufSet.has(a.uf || '')) return false
+      if (municipioFiltro && (a.municipio || '').trim().toLowerCase() !== municipioFiltro) return false
+      if (ramoFiltro) {
+        const ramos = (a.ramo || '').split(',').map((s) => s.trim().toLowerCase())
+        if (!ramos.includes(ramoFiltro.toLowerCase())) return false
+      }
       if (filtros.esfera && a.esfera !== filtros.esfera) return false
       if (filtros.tipo && a.tipo !== filtros.tipo) return false
       if (filtros.situacao && a.situacao !== filtros.situacao) return false
       if (!termo) return true
-      return `${a.nome} ${a.orgao || ''} ${a.descricao || ''} ${a.uf || ''} ${a.tipo || ''}`
+      return `${a.nome} ${a.orgao || ''} ${a.descricao || ''} ${a.uf || ''} ${a.tipo || ''} ${a.municipio || ''} ${a.ramo || ''}`
         .toLowerCase()
         .includes(termo)
     })
@@ -182,6 +202,8 @@ export default function Diretorio({
       switch (coluna) {
         case 'uf':
           return sinal * (a.uf || '').localeCompare(b.uf || '')
+        case 'municipio':
+          return sinal * (a.municipio || '').localeCompare(b.municipio || '')
         case 'orgao':
           return sinal * (a.orgao || '').localeCompare(b.orgao || '')
         case 'esfera':
@@ -221,6 +243,8 @@ export default function Diretorio({
 
   const filtrosAtivos =
     filtros.ufs.length +
+    (filtros.municipio ? 1 : 0) +
+    (filtros.ramo ? 1 : 0) +
     (filtros.esfera ? 1 : 0) +
     (filtros.tipo ? 1 : 0) +
     (filtros.situacao ? 1 : 0) +
@@ -228,7 +252,7 @@ export default function Diretorio({
     (filtros.busca ? 1 : 0)
 
   function limpar() {
-    setFiltros({ busca: '', ufs: [], esfera: '', tipo: '', situacao: '', ordenar: 'recentes', soNovos: false })
+    setFiltros({ busca: '', ufs: [], municipio: '', ramo: '', esfera: '', tipo: '', situacao: '', ordenar: 'recentes', soNovos: false })
     setBuscaInput('')
     setPagina(1)
   }
@@ -268,11 +292,21 @@ export default function Diretorio({
   }
 
   function exportar(formato: 'csv' | 'xlsx') {
+    const ramoLabel = (ramo?: string | null) =>
+      (ramo || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .map((id) => RAMOS.find((r) => r.id === id)?.label || id)
+        .join(', ')
+
     const linhas = filtrados.map((a) => ({
       Nome: a.nome,
       'Órgão': a.orgao || '',
       Esfera: ESFERA_LABEL[a.esfera] || a.esfera,
       UF: a.uf || '',
+      Cidade: a.municipio || '',
+      Ramo: ramoLabel(a.ramo),
       Tipo: TIPO_LABEL[a.tipo] || a.tipo,
       Situação: SITUACAO_LABEL[a.situacao]?.label || a.situacao,
       'Site oficial': a.status_link === 'verificado' ? a.url_site || '' : 'a verificar',
@@ -283,9 +317,10 @@ export default function Diretorio({
 
     if (formato === 'csv') {
       const csv = paraCSV(
-        ['Nome', 'Órgão', 'Esfera', 'UF', 'Tipo', 'Situação', 'Site oficial', 'Norma', 'Edital', 'Verificado em'],
+        ['Nome', 'Órgão', 'Esfera', 'UF', 'Cidade', 'Ramo', 'Tipo', 'Situação', 'Site oficial', 'Norma', 'Edital', 'Verificado em'],
         filtrados.map((a) => [
           a.nome, a.orgao || '', ESFERA_LABEL[a.esfera] || a.esfera, a.uf || '',
+          a.municipio || '', ramoLabel(a.ramo),
           TIPO_LABEL[a.tipo] || a.tipo, SITUACAO_LABEL[a.situacao]?.label || a.situacao,
           a.status_link === 'verificado' ? a.url_site || '' : 'a verificar',
           a.status_link === 'verificado' ? a.url_norma || '' : 'a verificar',
@@ -351,6 +386,7 @@ export default function Diretorio({
     { chave: 'nome', label: 'Nome', ordena: true },
     { chave: 'orgao', label: 'Órgão', ordena: true },
     { chave: 'uf', label: 'UF', ordena: true },
+    { chave: 'municipio', label: 'Cidade', ordena: true },
     { chave: 'esfera', label: 'Esfera', ordena: true },
     { chave: 'tipo', label: 'Tipo', ordena: true },
     { chave: 'situacao', label: 'Situação', ordena: true },
@@ -385,6 +421,16 @@ export default function Diretorio({
           <select className={`${INPUT} w-auto`} value={filtros.esfera} onChange={(e) => filtrar({ esfera: e.target.value })} aria-label="Esfera">
             <option value="">Todas as esferas</option>
             {Object.entries(ESFERA_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+
+          <select className={`${INPUT} w-auto`} value={filtros.municipio} onChange={(e) => filtrar({ municipio: e.target.value })} aria-label="Cidade">
+            <option value="">Todas as cidades</option>
+            {municipios.map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
+
+          <select className={`${INPUT} w-auto`} value={filtros.ramo} onChange={(e) => filtrar({ ramo: e.target.value })} aria-label="Ramo">
+            <option value="">Todos os ramos</option>
+            {RAMOS.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
           </select>
 
           <select className={`${INPUT} w-auto`} value={filtros.tipo} onChange={(e) => filtrar({ tipo: e.target.value })} aria-label="Tipo">
@@ -437,6 +483,8 @@ export default function Diretorio({
             {filtros.ufs.map((u) => (
               <Chip key={u} onRemove={() => alternarUf(u)}>UF: {u}</Chip>
             ))}
+            {filtros.municipio && <Chip onRemove={() => filtrar({ municipio: '' })}>Cidade: {filtros.municipio}</Chip>}
+            {filtros.ramo && <Chip onRemove={() => filtrar({ ramo: '' })}>Ramo: {RAMOS.find((r) => r.id === filtros.ramo)?.label || filtros.ramo}</Chip>}
             {filtros.esfera && <Chip onRemove={() => filtrar({ esfera: '' })}>{ESFERA_LABEL[filtros.esfera]}</Chip>}
             {filtros.tipo && <Chip onRemove={() => filtrar({ tipo: '' })}>{TIPO_LABEL[filtros.tipo]}</Chip>}
             {filtros.situacao && <Chip onRemove={() => filtrar({ situacao: '' })}>{SITUACAO_LABEL[filtros.situacao]?.label}</Chip>}
@@ -581,6 +629,7 @@ export default function Diretorio({
                       </td>
                       <td className="p-2 text-slate-600 dark:text-slate-300">{a.orgao || '—'}</td>
                       <td className="p-2 text-slate-600 dark:text-slate-300">{a.uf || '—'}</td>
+                      <td className="p-2 text-slate-600 dark:text-slate-300">{a.municipio || '—'}</td>
                       <td className="p-2 text-slate-600 dark:text-slate-300">{ESFERA_LABEL[a.esfera] || a.esfera}</td>
                       <td className="p-2 text-slate-600 dark:text-slate-300">{TIPO_LABEL[a.tipo] || a.tipo}</td>
                       <td className="p-2">
@@ -627,7 +676,7 @@ export default function Diretorio({
                   </button>
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
-                  <span className="inline-flex items-center gap-1"><MapPin className="w-3 h-3" />{ESFERA_LABEL[a.esfera] || a.esfera}{a.uf ? ` · ${a.uf}` : ''}</span>
+                  <span className="inline-flex items-center gap-1"><MapPin className="w-3 h-3" />{ESFERA_LABEL[a.esfera] || a.esfera}{a.uf ? ` · ${a.uf}` : ''}{a.municipio ? ` · ${a.municipio}` : ''}</span>
                   <span>·</span>
                   <span>{TIPO_LABEL[a.tipo] || a.tipo}</span>
                   <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold', SITUACAO_LABEL[a.situacao]?.classe)}>{SITUACAO_LABEL[a.situacao]?.label}</span>
@@ -668,7 +717,7 @@ export default function Diretorio({
           <div className="relative bg-white dark:bg-slate-900 w-full max-w-md h-full overflow-y-auto p-5 shadow-xl">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-primary">{ESFERA_LABEL[selecionado.esfera] || selecionado.esfera}{selecionado.uf ? ` · ${selecionado.uf}` : ''}</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-primary">{ESFERA_LABEL[selecionado.esfera] || selecionado.esfera}{selecionado.uf ? ` · ${selecionado.uf}` : ''}{selecionado.municipio ? ` · ${selecionado.municipio}` : ''}</p>
                 <h3 className="mt-1 text-lg font-bold text-slate-900 dark:text-white">{selecionado.nome}</h3>
                 <p className="text-sm text-slate-500 dark:text-slate-400">{selecionado.orgao || 'Órgão não informado'}</p>
               </div>
@@ -682,6 +731,16 @@ export default function Diretorio({
                 <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400"><ShieldCheck className="w-3.5 h-3.5" /> Verificado em {dataBR(selecionado.verificado_em)}</span>
               )}
             </div>
+
+            {(selecionado.ramo || '').trim() && (
+              <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                {(selecionado.ramo || '').split(',').map((s) => s.trim()).filter(Boolean).map((id) => (
+                  <span key={id} className="rounded-full bg-primary-soft dark:bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                    {RAMOS.find((r) => r.id === id)?.label || id}
+                  </span>
+                ))}
+              </div>
+            )}
 
             {selecionado.descricao && <p className="mt-3 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{selecionado.descricao}</p>}
             {selecionado.como_participar && (

@@ -47,6 +47,8 @@ export default async function CredenciamentoSicxPage({
   const inicial: Filtros = {
     busca: um(sp.q),
     ufs: um(sp.uf) ? um(sp.uf).split(',').map((s) => s.trim().toUpperCase()).filter(Boolean) : [],
+    municipio: um(sp.municipio),
+    ramo: um(sp.ramo),
     esfera: um(sp.esfera),
     tipo: um(sp.tipo),
     situacao: um(sp.situacao),

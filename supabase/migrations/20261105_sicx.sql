@@ -137,6 +137,8 @@ create table if not exists public.sicx_almoxarifados (
   orgao text,
   esfera text not null default 'federal', -- federal | estadual | municipal | autarquia | entidade
   uf text,
+  municipio text,
+  ramo text, -- ramos separados por vírgula (ids de RAMOS), p. ex. 'papelaria, informatica'
   tipo text not null default 'almoxarifado_virtual', -- almoxarifado_virtual | catalogo_eletronico | marketplace_publico | compras_expressas
   situacao text not null default 'a_verificar', -- ativo | em_implantacao | a_verificar | em_revisao
   descricao text,
@@ -161,6 +163,12 @@ alter table public.sicx_almoxarifados
   add column if not exists falhas_consecutivas integer not null default 0;
 alter table public.sicx_almoxarifados
   add column if not exists situacao_anterior text;
+
+-- Colunas de busca por cidade e ramo (idempotente).
+alter table public.sicx_almoxarifados
+  add column if not exists municipio text;
+alter table public.sicx_almoxarifados
+  add column if not exists ramo text;
 
 -- O público não vê registros "em revisão" (2 falhas seguidas na verificação).
 drop policy if exists "sicx_almoxarifados_select_public" on public.sicx_almoxarifados;
@@ -638,3 +646,24 @@ select * from (values
    'https://www.compras.ms.gov.br/sistemas/', null, null, now(), 'verificado', 6, true)
 ) as v(nome, orgao, esfera, uf, tipo, situacao, descricao, como_participar, url_site, url_norma, url_edital, verificado_em, status_link, ordem, ativo)
 where not exists (select 1 from public.sicx_almoxarifados);
+
+-- Preenche cidade (município da sede do órgão) e ramo (categorias do catálogo,
+-- conforme a descrição oficial de cada registro). Idempotente.
+update public.sicx_almoxarifados
+  set municipio = 'Brasília'
+  where nome = 'Almoxarifado Virtual Nacional (AVN)';
+update public.sicx_almoxarifados
+  set municipio = 'Vitória'
+  where nome = 'Almoxarifado Virtual do Espírito Santo (Seger)';
+update public.sicx_almoxarifados
+  set municipio = 'Belo Horizonte', ramo = 'papelaria, informatica'
+  where nome = 'Almoxarifado Virtual de Minas Gerais (AVMG)';
+update public.sicx_almoxarifados
+  set municipio = 'Rio de Janeiro', ramo = 'papelaria, limpeza, alimentos'
+  where nome = 'Almoxarifado Virtual do Rio de Janeiro';
+update public.sicx_almoxarifados
+  set municipio = 'Curitiba'
+  where nome = 'Sistema GMS / CAUFPR — Paraná';
+update public.sicx_almoxarifados
+  set municipio = 'Campo Grande'
+  where nome = 'e-Fornecedor / SIGA — Mato Grosso do Sul';

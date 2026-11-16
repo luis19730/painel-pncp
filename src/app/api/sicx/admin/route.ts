@@ -131,6 +131,8 @@ export async function POST(req: Request) {
       orgao: texto(body.orgao, 200),
       esfera: ESFERAS_VALIDAS.includes(String(body.esfera)) ? String(body.esfera) : 'federal',
       uf: texto(body.uf, 2)?.toUpperCase() || null,
+      municipio: texto(body.municipio, 200),
+      ramo: texto(body.ramo, 300),
       tipo: TIPOS_ALMOX.includes(String(body.tipo)) ? String(body.tipo) : 'almoxarifado_virtual',
       situacao: SITUACOES.includes(String(body.situacao)) ? String(body.situacao) : 'a_verificar',
       descricao: texto(body.descricao, 1500),

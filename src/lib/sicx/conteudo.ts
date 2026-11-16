@@ -709,6 +709,22 @@ export const CATEGORIAS_MERCADO = [
 ]
 
 // ---------------------------------------------------------------------------
+// Ramos de atividade/catálogo do diretório de almoxarifados (filtro "Ramo").
+// Os registros armazenam em `ramo` uma lista separada por vírgula destes ids.
+// ---------------------------------------------------------------------------
+export const RAMOS = [
+  { id: 'papelaria', label: 'Papelaria e expediente' },
+  { id: 'mobiliario', label: 'Mobiliário' },
+  { id: 'medicamentos', label: 'Medicamentos e saúde' },
+  { id: 'construcao', label: 'Materiais de construção' },
+  { id: 'informatica', label: 'Informática' },
+  { id: 'limpeza', label: 'Limpeza e higiene' },
+  { id: 'alimentos', label: 'Alimentos e copa' },
+  { id: 'servicos', label: 'Serviços comuns' },
+  { id: 'outros', label: 'Outros' },
+]
+
+// ---------------------------------------------------------------------------
 // 14. Links oficiais do rodapé
 // ---------------------------------------------------------------------------
 export const FONTES_OFICIAIS = [

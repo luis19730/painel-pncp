@@ -95,6 +95,8 @@ interface FormAlmox {
   orgao: string
   esfera: string
   uf: string
+  municipio: string
+  ramo: string
   tipo: string
   situacao: string
   descricao: string
@@ -108,7 +110,8 @@ interface FormAlmox {
 }
 
 const ALMOX_VAZIO: FormAlmox = {
-  id: '', nome: '', orgao: '', esfera: 'estadual', uf: '', tipo: 'almoxarifado_virtual',
+  id: '', nome: '', orgao: '', esfera: 'estadual', uf: '', municipio: '', ramo: '',
+  tipo: 'almoxarifado_virtual',
   situacao: 'a_verificar', descricao: '', como_participar: '', url_site: '', url_norma: '',
   url_edital: '', status_link: 'a_verificar', ordem: '0', ativo: true,
 }
@@ -247,6 +250,8 @@ export default function AdminPainelSicx() {
       orgao: a.orgao || '',
       esfera: a.esfera || 'estadual',
       uf: a.uf || '',
+      municipio: a.municipio || '',
+      ramo: a.ramo || '',
       tipo: a.tipo || 'almoxarifado_virtual',
       situacao: a.situacao || 'a_verificar',
       descricao: a.descricao || '',
@@ -446,6 +451,8 @@ export default function AdminPainelSicx() {
                     {ESFERAS.map((v) => <option key={v} value={v}>{v}</option>)}
                   </select>
                   <input className={INPUT} placeholder="UF (ex.: SP)" maxLength={2} value={formAlmox.uf} onChange={(e) => setFormAlmox((f) => ({ ...f, uf: e.target.value.toUpperCase() }))} />
+                  <input className={INPUT} placeholder="Cidade/Município (ex.: Belo Horizonte)" value={formAlmox.municipio} onChange={(e) => setFormAlmox((f) => ({ ...f, municipio: e.target.value }))} />
+                  <input className={INPUT} placeholder="Ramos (ids separados por vírgula: papelaria, informatica)" value={formAlmox.ramo} onChange={(e) => setFormAlmox((f) => ({ ...f, ramo: e.target.value }))} />
                   <select className={INPUT} value={formAlmox.tipo} onChange={(e) => setFormAlmox((f) => ({ ...f, tipo: e.target.value }))} aria-label="Tipo">
                     {TIPOS_ALMOX.map((v) => <option key={v} value={v}>{v}</option>)}
                   </select>

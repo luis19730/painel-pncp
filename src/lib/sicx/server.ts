@@ -55,7 +55,7 @@ export async function carregarConteudoSicx(): Promise<SicxConteudo> {
         .order('data_publicacao', { ascending: false }),
       supabase
         .from('sicx_almoxarifados')
-        .select('id, nome, orgao, esfera, uf, tipo, situacao, descricao, como_participar, url_site, url_norma, url_edital, verificado_em, status_link, ordem, criado_em')
+        .select('id, nome, orgao, esfera, uf, municipio, ramo, tipo, situacao, descricao, como_participar, url_site, url_norma, url_edital, verificado_em, status_link, ordem, criado_em')
         .eq('ativo', true)
         .neq('situacao', 'em_revisao')
         .order('ordem', { ascending: true })
